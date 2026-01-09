@@ -27,6 +27,9 @@ ralph/
 ├── skills/               # Claude Code skills (copy to your skills dir)
 │   ├── prd/SKILL.md      # PRD generator skill
 │   └── ralph/SKILL.md    # PRD-to-JSON converter skill
+├── setup/                # Shell setup files
+│   └── fish/
+│       └── cl-ralph.fish # Fish shell function
 ├── INSTALL_PROMPT.md     # Prompt for LLM-assisted installation
 ├── README.md             # This file
 └── .specs/               # Specifications
@@ -84,7 +87,7 @@ cp skills/ralph/SKILL.md "$SKILLS_DIR/ralph/"
 
 Create a shell function/script for your shell:
 
-**Fish:** Create `~/.config/fish/functions/cl-ralph.fish`
+**Fish:** Copy `setup/fish/cl-ralph.fish` to `~/.config/fish/functions/cl-ralph.fish`, then update `RALPH_HOME` at the top.
 **Bash:** Create `~/.local/bin/cl-ralph` (add to PATH)
 **Zsh:** Add function to `~/.zshrc` or create `~/.zfunc/cl-ralph`
 

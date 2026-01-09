@@ -37,9 +37,12 @@ Based on my answers, please:
 ralph/
 ├── ralph.sh              # Copy to: <ralph-dir>/ralph.sh
 ├── prompt.md             # Copy to: <ralph-dir>/prompt.md
-└── skills/
-    ├── prd/SKILL.md      # Copy to: <skills-dir>/prd/SKILL.md
-    └── ralph/SKILL.md    # Copy to: <skills-dir>/ralph/SKILL.md
+├── skills/
+│   ├── prd/SKILL.md      # Copy to: <skills-dir>/prd/SKILL.md
+│   └── ralph/SKILL.md    # Copy to: <skills-dir>/ralph/SKILL.md
+└── setup/
+    └── fish/
+        └── cl-ralph.fish # Copy to: ~/.config/fish/functions/cl-ralph.fish (Fish users)
 ```
 
 ### Create these directories:
@@ -81,13 +84,13 @@ Verify with:
 ### For Fish Users
 
 ```
-Create a fish function at ~/.config/fish/functions/cl-ralph.fish with subcommands: init, run, status, prd, archive, list, clean.
+Copy setup/fish/cl-ralph.fish to ~/.config/fish/functions/cl-ralph.fish
 
-Include helper functions:
-- __cl_ralph_project_id - converts pwd to project ID
-- __cl_ralph_project_dir - returns full path to project data directory
+Then edit the RALPH_HOME variable at the top of the file to point to your Ralph installation directory.
 
-Set RALPH_HOME to point to my Ralph installation directory.
+The file includes:
+- Main cl-ralph function with subcommands: init, run, status, prd, archive, list, clean
+- Helper functions: __cl_ralph_project_id, __cl_ralph_project_dir, __cl_ralph_help
 ```
 
 ### For Bash Users
