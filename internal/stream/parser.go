@@ -10,15 +10,11 @@ import (
 )
 
 // Parser handles parsing of stream-json output from Claude
-type Parser struct {
-	lexer *streamingjson.Lexer
-}
+type Parser struct{}
 
 // NewParser creates a new stream parser
 func NewParser() *Parser {
-	return &Parser{
-		lexer: streamingjson.NewLexer(),
-	}
+	return &Parser{}
 }
 
 // ParseResult holds the formatted output from parsing
@@ -35,9 +31,9 @@ func (p *Parser) ParseLine(line string) ParseResult {
 	}
 
 	// Use streaming-json-go to complete potentially incomplete JSON
-	p.lexer = streamingjson.NewLexer() // Reset lexer for each line
-	p.lexer.AppendString(line)
-	completedJSON := p.lexer.CompleteJSON()
+	lexer := streamingjson.NewLexer()
+	lexer.AppendString(line)
+	completedJSON := lexer.CompleteJSON()
 
 	// First, determine the event type
 	var event StreamEvent
@@ -120,21 +116,13 @@ func (p *Parser) parseResult(jsonStr string) ParseResult {
 }
 
 // extractToolContext extracts a brief context string from tool input
-func extractToolContext(toolName string, input map[string]interface{}) string {
+func extractToolContext(toolName string, input map[string]any) string {
 	if input == nil {
 		return ""
 	}
 
 	switch toolName {
-	case "Read":
-		if path, ok := input["file_path"].(string); ok {
-			return shortenPath(path)
-		}
-	case "Write":
-		if path, ok := input["file_path"].(string); ok {
-			return shortenPath(path)
-		}
-	case "Edit":
+	case "Read", "Write", "Edit":
 		if path, ok := input["file_path"].(string); ok {
 			return shortenPath(path)
 		}
@@ -142,11 +130,7 @@ func extractToolContext(toolName string, input map[string]interface{}) string {
 		if cmd, ok := input["command"].(string); ok {
 			return truncate(cmd, 50)
 		}
-	case "Glob":
-		if pattern, ok := input["pattern"].(string); ok {
-			return pattern
-		}
-	case "Grep":
+	case "Glob", "Grep":
 		if pattern, ok := input["pattern"].(string); ok {
 			return truncate(pattern, 40)
 		}

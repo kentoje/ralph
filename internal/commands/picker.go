@@ -143,7 +143,7 @@ func RunInteractivePicker() error {
 func executeCommand(cmd string) error {
 	switch cmd {
 	case "run":
-		return Run(10)
+		return Run(DefaultMaxIterations)
 	case "init":
 		return Init()
 	case "status":
@@ -167,27 +167,5 @@ func executeCommand(cmd string) error {
 }
 
 func printHelpFromPicker() {
-	help := `Ralph - Autonomous Agent CLI
-
-Usage: ralph [command] [options]
-
-Commands:
-  (no args)    Interactive command picker
-  help         Show this help message
-  setup        Configure RALPH_HOME path
-  init         Initialize Ralph for current project
-  run [n]      Run autonomous loop (default: 10 iterations)
-  status       Show current project status
-  prd          Launch Claude for PRD creation
-  list         List all projects with archive info
-  archive      Manually archive current run
-  clean        Remove project data (--all for everything)
-
-Examples:
-  ralph              # Interactive mode
-  ralph run          # Run with 10 iterations
-  ralph run 5        # Run with 5 iterations
-  ralph clean --all  # Remove all project data
-`
-	fmt.Print(help)
+	fmt.Print(HelpText)
 }

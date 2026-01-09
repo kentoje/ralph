@@ -14,6 +14,38 @@ import (
 	"github.com/kento/ralph/internal/project"
 )
 
+// Constants
+const (
+	DefaultMaxIterations = 25
+	IterationSleepSecs   = 2
+	MaxNameDisplayLen    = 50
+	MinNameDisplayLen    = 20
+)
+
+// HelpText is the CLI help message
+const HelpText = `Ralph - Autonomous Agent CLI
+
+Usage: ralph [command] [options]
+
+Commands:
+  (no args)    Interactive command picker
+  help         Show this help message
+  setup        Configure RALPH_HOME path
+  init         Initialize Ralph for current project
+  run [n]      Run autonomous loop (default: 10 iterations)
+  status       Show current project status
+  prd          Launch Claude for PRD creation
+  list         List all projects with archive info
+  archive      Manually archive current run
+  clean        Remove project data (--all for everything)
+
+Examples:
+  ralph              # Interactive mode
+  ralph run          # Run with 10 iterations
+  ralph run 5        # Run with 5 iterations
+  ralph clean --all  # Remove all project data
+`
+
 // Setup configures the RALPH_HOME path
 func Setup() error {
 	fmt.Println("Ralph Setup")

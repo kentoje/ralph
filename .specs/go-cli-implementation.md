@@ -91,3 +91,31 @@ $RALPH_HOME/projects/<project-id>/
   - Added `internal/stream/` package with types and parser
   - Uses `streaming-json-go` library for robust JSON handling
   - Displays: `[ToolName] context` for tools, plain text for messages, `[Done] status` for results
+
+- [x] Code simplification and maintainability improvements (2025-01)
+  - **Consolidated help text** - Single `HelpText` constant in `commands.go`, used by both main.go and picker.go
+  - **Added named constants** - `DefaultMaxIterations`, `IterationSleepSecs`, `MaxNameDisplayLen`, `MinNameDisplayLen`
+  - **Simplified parser** - Removed unused lexer field from Parser struct, create lexer locally in ParseLine
+  - **Simplified switch statements** - Grouped similar tools (Read/Write/Edit, Glob/Grep) in extractToolContext
+  - **Removed redundant code** - PRD existence check, hard-coded paths, unused style variables
+  - **Fixed strings.Builder bug** - Changed to pointer `*strings.Builder` to prevent copy-by-value panic in bubbletea
+
+## Code Architecture
+
+### Constants (commands.go)
+
+```go
+const (
+    DefaultMaxIterations = 10   // Default run iterations
+    IterationSleepSecs   = 2    // Sleep between iterations
+    MaxNameDisplayLen    = 50   // Max project name length in list
+    MinNameDisplayLen    = 20   // Min project name length in list
+)
+```
+
+### Key Design Decisions
+
+1. **strings.Builder as pointer** - bubbletea passes models by value; `strings.Builder` cannot be copied after use
+2. **Lexer created per-line** - No benefit to reusing lexer between lines in stream parser
+3. **Help text as constant** - Single source of truth, used by both CLI and interactive picker
+4. **Separate command routing** - main.go handles CLI args (flags, numeric args), picker.go uses defaults

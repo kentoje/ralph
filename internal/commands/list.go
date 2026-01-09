@@ -12,21 +12,9 @@ import (
 	"github.com/kento/ralph/internal/project"
 )
 
-var (
-	listTitleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("170"))
-
-	listHeaderStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("252"))
-
-	listCompleteStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("42"))
-
-	listDimStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
-)
+var listTitleStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.Color("170"))
 
 type projectInfo struct {
 	id           string
@@ -67,11 +55,11 @@ func List() error {
 	}
 
 	// Cap max name length
-	if maxNameLen > 50 {
-		maxNameLen = 50
+	if maxNameLen > MaxNameDisplayLen {
+		maxNameLen = MaxNameDisplayLen
 	}
-	if maxNameLen < 20 {
-		maxNameLen = 20
+	if maxNameLen < MinNameDisplayLen {
+		maxNameLen = MinNameDisplayLen
 	}
 
 	fmt.Println(listTitleStyle.Render("Ralph Projects"))

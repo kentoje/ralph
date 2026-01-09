@@ -71,7 +71,7 @@ func (s *runState) killCurrentProcess() {
 type runModel struct {
 	viewport      viewport.Model
 	spinner       spinner.Model
-	content       strings.Builder
+	content       *strings.Builder
 	lines         []string
 	iteration     int
 	maxIterations int
@@ -258,6 +258,7 @@ func Run(maxIterations int) error {
 	m := runModel{
 		viewport:      vp,
 		spinner:       s,
+		content:       &strings.Builder{},
 		maxIterations: maxIterations,
 		projectDir:    projectDir,
 		workingDir:    workingDir,
@@ -265,16 +266,14 @@ func Run(maxIterations int) error {
 		state:         state,
 	}
 
-	// Load initial PRD state
-	if prd.Exists(projectDir) {
-		p, _ := prd.Load(projectDir)
-		if p != nil {
-			m.branch = p.BranchName
-			m.completed = p.CompletedCount()
-			m.total = p.TotalCount()
-			if next := p.NextIncomplete(); next != nil {
-				m.currentStory = next.ID
-			}
+	// Load initial PRD state (existence already validated above)
+	prdData, _ := prd.Load(projectDir)
+	if prdData != nil {
+		m.branch = prdData.BranchName
+		m.completed = prdData.CompletedCount()
+		m.total = prdData.TotalCount()
+		if next := prdData.NextIncomplete(); next != nil {
+			m.currentStory = next.ID
 		}
 	}
 
@@ -299,7 +298,6 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 	possiblePaths := []string{
 		promptPath,
 		filepath.Join(os.Getenv("HOME"), ".config", "claude", "scripts", "ralph", "prompt.md"),
-		"/Volumes/HomeX/kento/dotfiles/.config/claude/scripts/ralph/prompt.md",
 	}
 
 	var foundPromptPath string
@@ -423,7 +421,7 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(2 * time.Second):
+		case <-time.After(time.Duration(IterationSleepSecs) * time.Second):
 		}
 	}
 
