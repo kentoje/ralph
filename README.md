@@ -57,28 +57,22 @@ ralph/
 
 - Go 1.21+
 - Claude Code CLI (`claude`)
+- `jq` (for fish function)
 
-### Build
+### Build & Setup
 
 ```bash
 # Clone or download this repository
 cd ralph
 
-# Build the binary
+# Build the binary (stays in repo directory)
 go build -o ralph ./cmd/ralph
 
-# Move to a directory in your PATH
-mv ralph ~/.local/bin/
-# or
-sudo mv ralph /usr/local/bin/
+# Run setup (press Enter to use current directory as RALPH_HOME)
+./ralph setup
 ```
 
-### First-time Setup
-
-```bash
-# Run setup to configure RALPH_HOME (where project data is stored)
-ralph setup
-```
+The setup stores config at `~/.config/ralph/config.json`. The binary remains at `$RALPH_HOME/ralph`.
 
 ### Install Skills (Optional but Recommended)
 
@@ -91,13 +85,51 @@ cp skills/prd/SKILL.md "$SKILLS_DIR/prd/"
 cp skills/ralph/SKILL.md "$SKILLS_DIR/ralph/"
 ```
 
-### Shell Alias (Optional)
+### Fish Function (Recommended)
 
-Add to your shell config for the old `cl-ralph` command:
+Create `~/.config/fish/functions/ralph.fish`:
+
+```fish
+function ralph -d "Global Ralph autonomous agent for Claude Code"
+    set -l CONFIG_FILE "$HOME/.config/ralph/config.json"
+
+    if not test -f "$CONFIG_FILE"
+        echo "Error: Ralph not configured. Run 'ralph setup' from the ralph repo first."
+        return 1
+    end
+
+    set -l RALPH_HOME (cat "$CONFIG_FILE" | jq -r '.ralph_home')
+
+    if test -z "$RALPH_HOME" -o "$RALPH_HOME" = "null"
+        echo "Error: ralph_home not set in config."
+        return 1
+    end
+
+    set -l RALPH_BIN "$RALPH_HOME/ralph"
+
+    if not test -x "$RALPH_BIN"
+        echo "Error: ralph binary not found at $RALPH_BIN"
+        echo "Build it with: cd $RALPH_HOME && go build -o ralph ./cmd/ralph"
+        return 1
+    end
+
+    $RALPH_BIN $argv
+end
+```
+
+### Bash/Zsh Alias (Alternative)
 
 ```bash
-# ~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish
-alias cl-ralph='ralph'
+# Add to ~/.bashrc or ~/.zshrc
+ralph() {
+    local config="$HOME/.config/ralph/config.json"
+    if [[ -f "$config" ]]; then
+        local home=$(jq -r '.ralph_home' "$config")
+        "$home/ralph" "$@"
+    else
+        echo "Error: Ralph not configured. Run 'ralph setup' first."
+    fi
+}
 ```
 
 ## Usage
@@ -135,7 +167,8 @@ ralph archive
 |---------|-------------|
 | `ralph` | Interactive command picker (TUI) |
 | `ralph help` | Show help text |
-| `ralph setup` | Configure RALPH_HOME path |
+| `ralph setup` | Configure RALPH_HOME path (defaults to current directory) |
+| `ralph home` | Print RALPH_HOME path |
 | `ralph init` | Initialize Ralph for current project |
 | `ralph run [n]` | Run autonomous loop (default: 10 iterations) |
 | `ralph status` | Show PRD progress |
@@ -159,9 +192,11 @@ Config is stored at `~/.config/ralph/config.json`:
 
 ```json
 {
-  "ralph_home": "/path/to/ralph/projects"
+  "ralph_home": "/path/to/ralph/repo"
 }
 ```
+
+`ralph_home` points to the Ralph repository root. The binary is at `$ralph_home/ralph` and project data is stored in `$ralph_home/projects/`.
 
 ## Project Data Structure
 

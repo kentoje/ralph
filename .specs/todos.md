@@ -1,4 +1,4 @@
-- add custom commands?
-- add better logs when ralph is running
-- instead of using fish/bash/zsh, make a proper cli program?
+- add claude code config detection, and symlink skills
+- use other ui component from bubble
+- put all infos at the bottom
 - make any agent cli pluggable?

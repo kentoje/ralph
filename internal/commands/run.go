@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kento/ralph/internal/config"
 	"github.com/kento/ralph/internal/prd"
 	"github.com/kento/ralph/internal/project"
 	"github.com/kento/ralph/internal/stream"
@@ -292,24 +293,16 @@ func Run(maxIterations int) error {
 }
 
 func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, projectDir, workingDir string, maxIterations int) {
-	promptPath := filepath.Join(filepath.Dir(projectDir), "..", "..", "prompt.md")
-
-	// Find prompt.md - try common locations
-	possiblePaths := []string{
-		promptPath,
-		filepath.Join(os.Getenv("HOME"), ".config", "claude", "scripts", "ralph", "prompt.md"),
+	// Get ralph home from config
+	ralphHome, err := config.GetRalphHome()
+	if err != nil {
+		p.Send(runDoneMsg{err: fmt.Errorf("failed to get ralph home: %w", err)})
+		return
 	}
 
-	var foundPromptPath string
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			foundPromptPath = path
-			break
-		}
-	}
-
-	if foundPromptPath == "" {
-		p.Send(runDoneMsg{err: fmt.Errorf("prompt.md not found")})
+	promptPath := filepath.Join(ralphHome, "prompt.md")
+	if _, err := os.Stat(promptPath); os.IsNotExist(err) {
+		p.Send(runDoneMsg{err: fmt.Errorf("prompt.md not found at %s", promptPath)})
 		return
 	}
 
@@ -322,7 +315,7 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		}
 
 		// Read and substitute prompt
-		promptContent, err := os.ReadFile(foundPromptPath)
+		promptContent, err := os.ReadFile(promptPath)
 		if err != nil {
 			p.Send(runDoneMsg{err: err})
 			return

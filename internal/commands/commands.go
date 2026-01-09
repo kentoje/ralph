@@ -31,6 +31,7 @@ Commands:
   (no args)    Interactive command picker
   help         Show this help message
   setup        Configure RALPH_HOME path
+  home         Print RALPH_HOME path
   init         Initialize Ralph for current project
   run [n]      Run autonomous loop (default: 10 iterations)
   status       Show current project status
@@ -41,10 +42,21 @@ Commands:
 
 Examples:
   ralph              # Interactive mode
+  ralph home         # Print RALPH_HOME path
   ralph run          # Run with 10 iterations
   ralph run 5        # Run with 5 iterations
   ralph clean --all  # Remove all project data
 `
+
+// Home prints the RALPH_HOME path
+func Home() error {
+	home, err := config.GetRalphHome()
+	if err != nil {
+		return err
+	}
+	fmt.Println(home)
+	return nil
+}
 
 // Setup configures the RALPH_HOME path
 func Setup() error {
@@ -53,6 +65,7 @@ func Setup() error {
 	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)
+	cwd, _ := os.Getwd()
 
 	// Check for existing config
 	existingCfg, _ := config.Load()
@@ -60,7 +73,7 @@ func Setup() error {
 		fmt.Printf("Current RALPH_HOME: %s\n", existingCfg.RalphHome)
 		fmt.Print("Enter new path (or press Enter to keep current): ")
 	} else {
-		fmt.Print("Enter path for RALPH_HOME (where project data will be stored): ")
+		fmt.Printf("Enter path for RALPH_HOME (or press Enter to use current directory: %s): ", cwd)
 	}
 
 	input, err := reader.ReadString('\n')
@@ -76,8 +89,9 @@ func Setup() error {
 		return nil
 	}
 
+	// Use current directory if empty input and no existing config
 	if path == "" {
-		return fmt.Errorf("RALPH_HOME path cannot be empty")
+		path = cwd
 	}
 
 	// Expand ~ to home directory

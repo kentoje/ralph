@@ -21,7 +21,7 @@ internal/commands/run.go             # Run command with real-time TUI
 
 ### Files Modified
 
-- `/Volumes/HomeX/kento/dotfiles/.config/fish/functions/cl-ralph.fish` - Updated to call the new `ralph` binary
+- `~/.config/fish/functions/ralph.fish` - Fish function reads `ralph_home` from config, calls `$ralph_home/ralph`
 
 ### Files Deleted
 
@@ -33,7 +33,8 @@ internal/commands/run.go             # Run command with real-time TUI
 |---------|-------------|
 | `ralph` (no args) | Interactive command picker (hjkl/arrows navigation) |
 | `ralph help` | Show help text |
-| `ralph setup` | Configure RALPH_HOME path |
+| `ralph setup` | Configure RALPH_HOME path (defaults to current directory) |
+| `ralph home` | Print RALPH_HOME path |
 | `ralph init` | Initialize project (creates .path file for display) |
 | `ralph status` | Show project status |
 | `ralph prd` | Launch Claude for PRD creation |
@@ -62,9 +63,14 @@ internal/commands/run.go             # Run command with real-time TUI
 ```
 ~/.config/ralph/config.json
 {
-  "ralph_home": "/path/to/ralph/projects"
+  "ralph_home": "/path/to/ralph/repo"
 }
 ```
+
+`ralph_home` points to the Ralph repository root:
+- Binary: `$ralph_home/ralph`
+- Prompt: `$ralph_home/prompt.md`
+- Projects: `$ralph_home/projects/<project-id>/`
 
 ### Project Data Structure (unchanged)
 
@@ -99,6 +105,13 @@ $RALPH_HOME/projects/<project-id>/
   - **Simplified switch statements** - Grouped similar tools (Read/Write/Edit, Glob/Grep) in extractToolContext
   - **Removed redundant code** - PRD existence check, hard-coded paths, unused style variables
   - **Fixed strings.Builder bug** - Changed to pointer `*strings.Builder` to prevent copy-by-value panic in bubbletea
+
+- [x] Dynamic path configuration (2025-01)
+  - **Added `ralph home` command** - Prints the configured `ralph_home` path
+  - **Setup defaults to current directory** - Running `ralph setup` and pressing Enter uses `pwd` as RALPH_HOME
+  - **Dynamic prompt.md location** - `run.go` now uses `config.GetRalphHome()` to find `prompt.md`
+  - **Updated fish function** - Reads `ralph_home` from config, binary is at `$ralph_home/ralph`
+  - **Updated SKILL.md files** - Use `$(ralph home)/projects/...` instead of hardcoded paths
 
 ## Code Architecture
 
