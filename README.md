@@ -1,5 +1,7 @@
 # Ralph - Autonomous AI Agent Loop
 
+Based on [snarktank/ralph](https://github.com/snarktank/ralph?tab=readme-ov-file)
+
 Ralph is an autonomous agent system that runs Claude Code in a loop to implement PRD (Product Requirements Document) stories one at a time.
 
 ## How It Works
@@ -35,6 +37,7 @@ ralph/
 ### Option 1: LLM-Assisted Installation (Recommended)
 
 Copy the prompt from `INSTALL_PROMPT.md` and paste it into Claude Code. Answer the questions about:
+
 - Where to store Ralph scripts
 - Where your Claude Code skills are located
 - Which shell you use (fish/bash/zsh)
@@ -120,15 +123,15 @@ cl-ralph archive
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `cl-ralph init` | Initialize Ralph for current project |
-| `cl-ralph run [n]` | Run loop (default: 10 iterations) |
-| `cl-ralph status` | Show PRD progress |
-| `cl-ralph prd` | Launch Claude for PRD creation |
-| `cl-ralph archive` | Archive current run |
-| `cl-ralph list` | List all Ralph projects |
-| `cl-ralph clean` | Remove project data |
+| Command            | Description                          |
+| ------------------ | ------------------------------------ |
+| `cl-ralph init`    | Initialize Ralph for current project |
+| `cl-ralph run [n]` | Run loop (default: 10 iterations)    |
+| `cl-ralph status`  | Show PRD progress                    |
+| `cl-ralph prd`     | Launch Claude for PRD creation       |
+| `cl-ralph archive` | Archive current run                  |
+| `cl-ralph list`    | List all Ralph projects              |
+| `cl-ralph clean`   | Remove project data                  |
 
 ## Project Data Structure
 
@@ -153,11 +156,13 @@ Ralph stores all data in a global directory, keeping your projects clean:
 Each story must be completable in ONE iteration. If a story is too big, Claude runs out of context before finishing.
 
 **Good sizes:**
+
 - Add a database column and migration
 - Add a UI component to an existing page
 - Update a server action with new logic
 
 **Too big (split these):**
+
 - "Build the entire dashboard"
 - "Add authentication"
 - "Refactor the API"
@@ -186,6 +191,7 @@ Must be verifiable, not vague:
 ## How Memory Works
 
 Between iterations, Ralph remembers via:
+
 - **Git history** - Every commit is a checkpoint
 - **prd.json** - Tracks which stories are complete (`passes: true/false`)
 - **progress.txt** - Consolidated learnings and patterns
