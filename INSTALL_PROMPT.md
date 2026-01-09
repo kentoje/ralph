@@ -7,110 +7,130 @@ Use this prompt to instruct an LLM to install Ralph on a new machine.
 ## Prompt
 
 ```
-I want you to install the Ralph autonomous agent system on my machine. Ralph is a tool that runs Claude Code in a loop to implement PRD stories autonomously.
+I want you to install the Ralph autonomous agent system on my machine. Ralph is a Go-based tool that runs Claude Code in a loop to implement PRD stories autonomously.
 
 Before we start, I need to know:
 
-1. Where should Ralph store its scripts and project data?
-   Example: ~/.config/claude/scripts/ralph/
+1. Where is the Ralph source code located?
+   (The directory containing go.mod, cmd/, internal/, etc.)
 
-2. Where are your Claude Code skills located?
-   Example: ~/.config/claude/skills/
+2. Where should the `ralph` binary be installed?
+   Examples: ~/.local/bin/, /usr/local/bin/
 
-3. Which shell do you use?
-   - fish
-   - bash
-   - zsh
+3. Where are your Claude Code skills located?
+   Example: ~/.claude/skills/
 
 Based on my answers, please:
 
-1. Create the directory structure for Ralph
-2. Copy the core files (ralph.sh, prompt.md) to my Ralph directory
-3. Copy the skills from the `skills/` directory to my Claude skills location
-4. Create shell utilities for my shell (function or alias)
+1. Build the Ralph binary from source
+2. Move it to my PATH
+3. Run `ralph setup` to configure RALPH_HOME
+4. Copy the skills from the `skills/` directory to my Claude skills location
 
-## What to Copy
+## Build Steps
 
-### From this repository:
+```bash
+# Navigate to Ralph source
+cd <ralph-source-dir>
+
+# Build the binary
+go build -o ralph ./cmd/ralph
+
+# Move to PATH
+mv ralph <install-dir>/ralph
+
+# Run first-time setup
+ralph setup
+```
+
+## Skills to Copy
 
 ```
-ralph/
-├── ralph.sh              # Copy to: <ralph-dir>/ralph.sh
-├── prompt.md             # Copy to: <ralph-dir>/prompt.md
-├── skills/
-│   ├── prd/SKILL.md      # Copy to: <skills-dir>/prd/SKILL.md
-│   └── ralph/SKILL.md    # Copy to: <skills-dir>/ralph/SKILL.md
-└── setup/
-    └── fish/
-        └── cl-ralph.fish # Copy to: ~/.config/fish/functions/cl-ralph.fish (Fish users)
+<ralph-source>/skills/
+├── prd/SKILL.md      # Copy to: <skills-dir>/prd/SKILL.md
+└── ralph/SKILL.md    # Copy to: <skills-dir>/ralph/SKILL.md
 ```
-
-### Create these directories:
-- `<ralph-dir>/projects/` - For per-project data
-
-### Shell Utility Commands to Create
-- `cl-ralph init` - Initialize Ralph for current project
-- `cl-ralph run [n]` - Run the autonomous loop
-- `cl-ralph status` - Show PRD progress
-- `cl-ralph prd` - Launch Claude for PRD creation
-- `cl-ralph archive` - Archive current run
-- `cl-ralph list` - List all projects
-- `cl-ralph clean` - Remove project data
-
-### Project ID Convention
-Projects are identified by their absolute path, converted to lowercase with slashes replaced by dashes:
-`/Users/me/code/myapp` → `users-me-code-myapp`
-
-### Critical Path Handling
-The skills must:
-- Run `echo $HOME` to get actual home directory (never assume /Users/username)
-- Run `pwd | sed 's|^/||' | tr '/' '-' | tr '[:upper:]' '[:lower:]'` for project ID
-- Use full expanded paths when writing files
-
-Update the skills after copying to use my actual paths.
 
 ## After Installation
 
 Verify with:
-1. `cd /path/to/any/project`
-2. `cl-ralph init`
-3. `cl-ralph status`
+1. `ralph help` - Should show available commands
+2. `cd /path/to/any/project`
+3. `ralph init`
+4. `ralph status`
+
+## Optional: Shell Alias
+
+If you want to use the old `cl-ralph` command name:
+
+**Bash/Zsh:**
+```bash
+echo 'alias cl-ralph="ralph"' >> ~/.bashrc  # or ~/.zshrc
+```
+
+**Fish:**
+```fish
+alias cl-ralph='ralph' --save
+```
 ```
 
 ---
 
-## Shell-Specific Prompts
+## Quick Install (Copy-Paste)
 
-### For Fish Users
+For users who know their paths:
+
+```bash
+# Set your paths
+RALPH_SRC="$HOME/.config/claude/scripts/ralph"
+INSTALL_DIR="$HOME/.local/bin"
+SKILLS_DIR="$HOME/.claude/skills"
+
+# Build and install
+cd "$RALPH_SRC"
+go build -o ralph ./cmd/ralph
+mv ralph "$INSTALL_DIR/"
+
+# Setup (interactive - configures RALPH_HOME)
+ralph setup
+
+# Install skills
+mkdir -p "$SKILLS_DIR/prd" "$SKILLS_DIR/ralph"
+cp skills/prd/SKILL.md "$SKILLS_DIR/prd/"
+cp skills/ralph/SKILL.md "$SKILLS_DIR/ralph/"
+
+# Verify
+ralph help
+```
+
+---
+
+## Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `ralph` | Interactive command picker (TUI with hjkl/arrows) |
+| `ralph help` | Show help text |
+| `ralph setup` | Configure RALPH_HOME path |
+| `ralph init` | Initialize Ralph for current project |
+| `ralph run [n]` | Run autonomous loop (default: 10 iterations) |
+| `ralph status` | Show PRD progress |
+| `ralph prd` | Launch Claude for PRD creation |
+| `ralph list` | List all projects |
+| `ralph archive` | Archive current run |
+| `ralph clean` | Remove current project data |
+
+---
+
+## Configuration
+
+After running `ralph setup`, config is stored at:
 
 ```
-Copy setup/fish/cl-ralph.fish to ~/.config/fish/functions/cl-ralph.fish
-
-Then edit the RALPH_HOME variable at the top of the file to point to your Ralph installation directory.
-
-The file includes:
-- Main cl-ralph function with subcommands: init, run, status, prd, archive, list, clean
-- Helper functions: __cl_ralph_project_id, __cl_ralph_project_dir, __cl_ralph_help
+~/.config/ralph/config.json
+{
+  "ralph_home": "/path/to/ralph/projects"
+}
 ```
 
-### For Bash Users
-
-```
-Create a bash script at ~/.local/bin/cl-ralph (make it executable) with subcommands: init, run, status, prd, archive, list, clean.
-
-The script should:
-- Use $HOME for paths
-- Define RALPH_HOME pointing to my Ralph installation
-- Support: cl-ralph <command> [args]
-```
-
-### For Zsh Users
-
-```
-Create a zsh function in ~/.zshrc or ~/.zfunc/cl-ralph with subcommands: init, run, status, prd, archive, list, clean.
-
-The function should:
-- Use $HOME for paths
-- Define RALPH_HOME pointing to my Ralph installation
-- Support: cl-ralph <command> [args]
-```
+Project data is stored in `<ralph_home>/projects/<project-id>/`.

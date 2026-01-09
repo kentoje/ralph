@@ -1,2 +1,12 @@
 projects/*
 !projects/.gitkeep
+
+# Compiled binary
+ralph
+
+# OS-specific
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

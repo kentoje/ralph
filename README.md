@@ -18,80 +18,87 @@ Ralph is an autonomous agent system that runs Claude Code in a loop to implement
 
 **Key Innovation:** Each iteration gets fresh context, preventing the AI from getting lost in large implementations. Memory persists via git history, progress.txt, and prd.json.
 
+## Features
+
+- **Interactive TUI** - Run `ralph` with no args for a command picker with hjkl/arrow navigation
+- **Real-time Output** - Stream-JSON parsing shows tool usage and progress:
+  ```
+  [Read] config.go
+  [Bash] go build ./...
+  [Edit] main.go
+  Implementing the feature...
+  [Done] Success in 14.3s (3 turns)
+  ```
+- **Process Management** - Press `q` to cleanly kill running Claude subprocess
+- **Cross-platform** - Single Go binary, no shell dependencies
+
 ## Repository Structure
 
 ```
 ralph/
-├── ralph.sh              # Main loop script
-├── prompt.md             # Instructions for each Claude iteration
-├── skills/               # Claude Code skills (copy to your skills dir)
-│   ├── prd/SKILL.md      # PRD generator skill
-│   └── ralph/SKILL.md    # PRD-to-JSON converter skill
-├── setup/                # Shell setup files
-│   └── fish/
-│       └── cl-ralph.fish # Fish shell function
-├── INSTALL_PROMPT.md     # Prompt for LLM-assisted installation
-├── README.md             # This file
-└── .specs/               # Specifications
+├── cmd/ralph/main.go         # Entry point
+├── internal/
+│   ├── commands/             # CLI commands (run, status, list, etc.)
+│   ├── config/               # Config management
+│   ├── prd/                  # PRD JSON parsing
+│   ├── project/              # Project directory management
+│   └── stream/               # Stream-JSON parser
+├── prompt.md                 # Instructions for each Claude iteration
+├── skills/                   # Claude Code skills
+│   ├── prd/SKILL.md          # PRD generator skill
+│   └── ralph/SKILL.md        # PRD-to-JSON converter skill
+├── go.mod
+└── README.md
 ```
 
 ## Installation
 
-### Option 1: LLM-Assisted Installation (Recommended)
+### Prerequisites
 
-Copy the prompt from `INSTALL_PROMPT.md` and paste it into Claude Code. Answer the questions about:
+- Go 1.21+
+- Claude Code CLI (`claude`)
 
-- Where to store Ralph scripts
-- Where your Claude Code skills are located
-- Which shell you use (fish/bash/zsh)
-
-The LLM will set everything up for you.
-
-### Option 2: Manual Installation
-
-#### 1. Choose Your Directories
+### Build
 
 ```bash
-# Example locations - adjust to your preference
-RALPH_DIR="$HOME/.config/claude/scripts/ralph"
-SKILLS_DIR="$HOME/.config/claude/skills"
+# Clone or download this repository
+cd ralph
+
+# Build the binary
+go build -o ralph ./cmd/ralph
+
+# Move to a directory in your PATH
+mv ralph ~/.local/bin/
+# or
+sudo mv ralph /usr/local/bin/
 ```
 
-#### 2. Create Directory Structure
+### First-time Setup
 
 ```bash
-mkdir -p "$RALPH_DIR/projects"
-mkdir -p "$SKILLS_DIR/prd"
-mkdir -p "$SKILLS_DIR/ralph"
+# Run setup to configure RALPH_HOME (where project data is stored)
+ralph setup
 ```
 
-#### 3. Copy Core Files
+### Install Skills (Optional but Recommended)
+
+Copy the skills to your Claude Code skills directory:
 
 ```bash
-# Copy from this repository
-cp ralph.sh "$RALPH_DIR/"
-cp prompt.md "$RALPH_DIR/"
-chmod +x "$RALPH_DIR/ralph.sh"
-```
-
-#### 4. Copy Skills
-
-```bash
+SKILLS_DIR="$HOME/.claude/skills"
+mkdir -p "$SKILLS_DIR/prd" "$SKILLS_DIR/ralph"
 cp skills/prd/SKILL.md "$SKILLS_DIR/prd/"
 cp skills/ralph/SKILL.md "$SKILLS_DIR/ralph/"
 ```
 
-**Important:** After copying, edit the skills to update paths if your `$RALPH_DIR` differs from the default.
+### Shell Alias (Optional)
 
-#### 5. Create Shell Function
+Add to your shell config for the old `cl-ralph` command:
 
-Create a shell function/script for your shell:
-
-**Fish:** Copy `setup/fish/cl-ralph.fish` to `~/.config/fish/functions/cl-ralph.fish`, then update `RALPH_HOME` at the top.
-**Bash:** Create `~/.local/bin/cl-ralph` (add to PATH)
-**Zsh:** Add function to `~/.zshrc` or create `~/.zfunc/cl-ralph`
-
-See `INSTALL_PROMPT.md` for shell-specific details, or ask an LLM to generate it.
+```bash
+# ~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish
+alias cl-ralph='ralph'
+```
 
 ## Usage
 
@@ -102,46 +109,67 @@ See `INSTALL_PROMPT.md` for shell-specific details, or ask an LLM to generate it
 cd /path/to/your/project
 
 # 2. Initialize Ralph for this project
-cl-ralph init
+ralph init
 
 # 3. Create a PRD using the /prd skill
 # In Claude Code, run: /prd
 # Answer the clarifying questions
-# PRD saves to your Ralph projects directory
 
 # 4. Convert PRD to JSON using the /ralph skill
 # In Claude Code, run: /ralph
-# It auto-detects your project and saves prd.json
 
 # 5. Run the autonomous loop
-cl-ralph run        # Default: 10 iterations
-cl-ralph run 5      # Or specify max iterations
+ralph run        # Default: 10 iterations
+ralph run 5      # Or specify max iterations
 
 # 6. Monitor progress
-cl-ralph status
+ralph status
 
 # 7. When done with a feature
-cl-ralph archive
+ralph archive
 ```
 
 ### Commands
 
-| Command            | Description                          |
-| ------------------ | ------------------------------------ |
-| `cl-ralph init`    | Initialize Ralph for current project |
-| `cl-ralph run [n]` | Run loop (default: 10 iterations)    |
-| `cl-ralph status`  | Show PRD progress                    |
-| `cl-ralph prd`     | Launch Claude for PRD creation       |
-| `cl-ralph archive` | Archive current run                  |
-| `cl-ralph list`    | List all Ralph projects              |
-| `cl-ralph clean`   | Remove project data                  |
+| Command | Description |
+|---------|-------------|
+| `ralph` | Interactive command picker (TUI) |
+| `ralph help` | Show help text |
+| `ralph setup` | Configure RALPH_HOME path |
+| `ralph init` | Initialize Ralph for current project |
+| `ralph run [n]` | Run autonomous loop (default: 10 iterations) |
+| `ralph status` | Show PRD progress |
+| `ralph prd` | Launch Claude for PRD creation |
+| `ralph list` | List all projects with archive counts |
+| `ralph archive` | Archive current run |
+| `ralph clean` | Remove current project data |
+| `ralph clean --all` | Remove all Ralph data |
+
+### Run Command TUI
+
+During `ralph run`, you'll see:
+- Current iteration and story
+- Real-time formatted output (tool names, assistant text)
+- Progress bar showing completed stories
+- Press `q` to quit and kill the Claude process
+
+## Configuration
+
+Config is stored at `~/.config/ralph/config.json`:
+
+```json
+{
+  "ralph_home": "/path/to/ralph/projects"
+}
+```
 
 ## Project Data Structure
 
-Ralph stores all data in a global directory, keeping your projects clean:
+Ralph stores all data in RALPH_HOME, keeping your projects clean:
 
 ```
-<ralph-dir>/projects/<project-id>/
+<ralph-home>/projects/<project-id>/
+├── .path           # Original project path (for display)
 ├── prd.md          # Human-readable PRD
 ├── prd.json        # Machine-readable PRD with story status
 ├── progress.txt    # Learnings log
@@ -159,13 +187,11 @@ Ralph stores all data in a global directory, keeping your projects clean:
 Each story must be completable in ONE iteration. If a story is too big, Claude runs out of context before finishing.
 
 **Good sizes:**
-
 - Add a database column and migration
 - Add a UI component to an existing page
 - Update a server action with new logic
 
 **Too big (split these):**
-
 - "Build the entire dashboard"
 - "Add authentication"
 - "Refactor the API"
@@ -185,11 +211,11 @@ Stories execute in priority order. Dependencies must come first:
 
 Must be verifiable, not vague:
 
-- ✅ "Add status column with default 'pending'"
-- ✅ "Clicking delete shows confirmation dialog"
-- ✅ "Typecheck passes"
-- ❌ "Works correctly"
-- ❌ "Good UX"
+- "Add status column with default 'pending'"
+- "Clicking delete shows confirmation dialog"
+- "Typecheck passes"
+- ~~"Works correctly"~~
+- ~~"Good UX"~~
 
 ## How Memory Works
 
@@ -199,11 +225,13 @@ Between iterations, Ralph remembers via:
 - **prd.json** - Tracks which stories are complete (`passes: true/false`)
 - **progress.txt** - Consolidated learnings and patterns
 
-## Requirements
+## Dependencies
 
-- Claude Code CLI (`claude`)
-- `jq` for JSON processing
-- Fish/Bash/Zsh shell
+Go modules (automatically fetched):
+- `github.com/charmbracelet/bubbletea` - TUI framework
+- `github.com/charmbracelet/bubbles` - TUI components
+- `github.com/charmbracelet/lipgloss` - Styling
+- `github.com/karminski/streaming-json-go` - Stream JSON parsing
 
 ## License
 
