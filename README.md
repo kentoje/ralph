@@ -264,7 +264,7 @@ Between iterations, Ralph remembers via:
 
 Go modules (automatically fetched):
 - `github.com/charmbracelet/bubbletea` - TUI framework
-- `github.com/charmbracelet/bubbles` - TUI components
+- `github.com/charmbracelet/bubbles` - TUI components (viewport, list, progress)
 - `github.com/charmbracelet/lipgloss` - Styling
 - `github.com/karminski/streaming-json-go` - Stream JSON parsing
 

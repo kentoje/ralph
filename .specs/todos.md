@@ -1,4 +1,2 @@
 - add claude code config detection, and symlink skills
-- use other ui component from bubble
-- put all infos at the bottom
 - make any agent cli pluggable?

@@ -55,7 +55,7 @@ internal/commands/run.go             # Run command with real-time TUI
 ### Dependencies
 
 - `github.com/charmbracelet/bubbletea` - TUI framework
-- `github.com/charmbracelet/bubbles` - TUI components (spinner, viewport, list)
+- `github.com/charmbracelet/bubbles` - TUI components (viewport, list, progress)
 - `github.com/charmbracelet/lipgloss` - Styling
 
 ### Config Location
@@ -105,6 +105,12 @@ $RALPH_HOME/projects/<project-id>/
   - **Simplified switch statements** - Grouped similar tools (Read/Write/Edit, Glob/Grep) in extractToolContext
   - **Removed redundant code** - PRD existence check, hard-coded paths, unused style variables
   - **Fixed strings.Builder bug** - Changed to pointer `*strings.Builder` to prevent copy-by-value panic in bubbletea
+
+- [x] Progress bar upgrade (2025-01)
+  - **Replaced custom progress bar** - Now uses `github.com/charmbracelet/bubbles/progress` component
+  - **Added gradient styling** - Uses `progress.WithDefaultGradient()` for purple-to-pink gradient fill
+  - **Removed unused code** - Deleted `runProgressStyle`, `lines` field from runModel, and unused append
+  - **Static rendering** - Uses `ViewAs(percent)` for simple percentage-based display without animation
 
 - [x] Dynamic path configuration (2025-01)
   - **Added `ralph home` command** - Prints the configured `ralph_home` path

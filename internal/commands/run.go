@@ -36,9 +36,6 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("240"))
 
-	runProgressStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("42"))
-
 	runHelpStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
 			Padding(0, 1)
@@ -73,7 +70,6 @@ type runModel struct {
 	viewport viewport.Model
 	progress progress.Model
 	content  *strings.Builder
-	lines         []string
 	iteration     int
 	maxIterations int
 	currentStory  string
@@ -129,7 +125,6 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case outputMsg:
 		line := string(msg)
-		m.lines = append(m.lines, line)
 		m.content.WriteString(line + "\n")
 		m.viewport.SetContent(m.content.String())
 		m.viewport.GotoBottom()
@@ -192,7 +187,7 @@ func (m runModel) View() string {
 
 func (m runModel) renderProgressBar() string {
 	if m.total == 0 {
-		return runProgressStyle.Render("Progress: No stories loaded")
+		return runInfoStyle.Render("Progress: No stories loaded")
 	}
 
 	percent := float64(m.completed) / float64(m.total)
@@ -409,8 +404,7 @@ func streamOutput(p *tea.Program, r io.Reader) {
 }
 
 func checkForCompletion(projectDir string) bool {
-	// Check if the output contained <promise>COMPLETE</promise>
-	// For now, just check if a story was marked as complete in prd.json
+	// Check if any story was marked as complete in prd.json
 	if prd.Exists(projectDir) {
 		p, _ := prd.Load(projectDir)
 		if p != nil {
