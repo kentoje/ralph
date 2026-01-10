@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -70,9 +69,8 @@ func (s *runState) killCurrentProcess() {
 }
 
 type runModel struct {
-	viewport      viewport.Model
-	spinner       spinner.Model
-	content       *strings.Builder
+	viewport viewport.Model
+	content  *strings.Builder
 	lines         []string
 	iteration     int
 	maxIterations int
@@ -100,7 +98,7 @@ type runDoneMsg struct {
 }
 
 func (m runModel) Init() tea.Cmd {
-	return m.spinner.Tick
+	return nil
 }
 
 func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -126,11 +124,6 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		}
-
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		cmds = append(cmds, cmd)
 
 	case outputMsg:
 		line := string(msg)
@@ -171,7 +164,15 @@ func (m runModel) View() string {
 
 	var b strings.Builder
 
-	// Header
+	// Viewport with output
+	viewportContent := runBorderStyle.Render(m.viewport.View())
+	b.WriteString(viewportContent + "\n\n")
+
+	// Progress bar
+	progress := m.renderProgressBar()
+	b.WriteString(progress + "\n\n")
+
+	// Info (moved to bottom)
 	title := runTitleStyle.Render(fmt.Sprintf("Ralph - Iteration %d/%d", m.iteration+1, m.maxIterations))
 	storyInfo := runInfoStyle.Render(m.currentStory)
 	b.WriteString(fmt.Sprintf("%s %s\n", title, storyInfo))
@@ -179,24 +180,6 @@ func (m runModel) View() string {
 	if m.branch != "" {
 		b.WriteString(runInfoStyle.Render(fmt.Sprintf("Branch: %s", m.branch)) + "\n")
 	}
-	b.WriteString("\n")
-
-	// Spinner and status
-	var status string
-	if m.running {
-		status = fmt.Sprintf("%s Running claude...", m.spinner.View())
-	} else {
-		status = "●  Ready"
-	}
-	b.WriteString(runInfoStyle.Render(status) + "\n\n")
-
-	// Viewport with output
-	viewportContent := runBorderStyle.Render(m.viewport.View())
-	b.WriteString(viewportContent + "\n\n")
-
-	// Progress bar
-	progress := m.renderProgressBar()
-	b.WriteString(progress + "\n")
 
 	// Help
 	help := runHelpStyle.Render("q quit")
@@ -249,16 +232,11 @@ func Run(maxIterations int) error {
 	state := &runState{cancel: cancel}
 
 	// Initialize model
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-
 	vp := viewport.New(80, 20)
 	vp.SetContent("")
 
 	m := runModel{
 		viewport:      vp,
-		spinner:       s,
 		content:       &strings.Builder{},
 		maxIterations: maxIterations,
 		projectDir:    projectDir,

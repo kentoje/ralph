@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kento/ralph/internal/config"
 	"github.com/kento/ralph/internal/prd"
@@ -65,13 +66,16 @@ func List() error {
 	fmt.Println(listTitleStyle.Render("Ralph Projects"))
 	fmt.Println()
 
-	// Table header (no styling to keep alignment)
-	headerFmt := fmt.Sprintf("%%-%ds  %%-15s  %%-8s  %%s\n", maxNameLen)
-	fmt.Printf(headerFmt, "Project", "Branch", "Stories", "Archives")
-	fmt.Println(strings.Repeat("─", maxNameLen+2+15+2+8+2+8))
+	// Define table columns
+	columns := []table.Column{
+		{Title: "Project", Width: maxNameLen},
+		{Title: "Branch", Width: 15},
+		{Title: "Stories", Width: 10},
+		{Title: "Archives", Width: 10},
+	}
 
-	// Rows (no styling on column values to keep alignment)
-	rowFmt := fmt.Sprintf("%%-%ds  %%-15s  %%-8s  %%s\n", maxNameLen)
+	// Build table rows
+	rows := []table.Row{}
 	for _, info := range infos {
 		name := info.displayName
 		if len(name) > maxNameLen {
@@ -94,8 +98,31 @@ func List() error {
 
 		archives := fmt.Sprintf("%d", info.archiveCount)
 
-		fmt.Printf(rowFmt, name, branch, stories, archives)
+		rows = append(rows, table.Row{name, branch, stories, archives})
 	}
+
+	// Create and style the table
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(lipgloss.Color("170"))
+	s.Cell = s.Cell.Padding(0, 1)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithHeight(len(rows)+1),
+		table.WithStyles(s),
+	)
+
+	fmt.Println(t.View())
 
 	return nil
 }
