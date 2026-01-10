@@ -58,7 +58,16 @@ func Home() error {
 	return nil
 }
 
-// Setup configures the RALPH_HOME path
+// expandTilde expands ~ to the user's home directory
+func expandTilde(path string) string {
+	if strings.HasPrefix(path, "~") {
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, path[1:])
+	}
+	return path
+}
+
+// Setup configures the RALPH_HOME path and installs skills
 func Setup() error {
 	fmt.Println("Ralph Setup")
 	fmt.Println("===========")
@@ -86,6 +95,10 @@ func Setup() error {
 	// Keep existing if empty input and config exists
 	if path == "" && existingCfg != nil {
 		fmt.Println("Keeping existing configuration.")
+		// Still try to install skills
+		if err := installSkills(reader); err != nil {
+			fmt.Printf("Warning: failed to install skills: %v\n", err)
+		}
 		return nil
 	}
 
@@ -94,16 +107,8 @@ func Setup() error {
 		path = cwd
 	}
 
-	// Expand ~ to home directory
-	if strings.HasPrefix(path, "~") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-		path = filepath.Join(home, path[1:])
-	}
-
-	// Convert to absolute path
+	// Expand ~ and convert to absolute path
+	path = expandTilde(path)
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -128,9 +133,181 @@ func Setup() error {
 
 	fmt.Println()
 	fmt.Printf("RALPH_HOME set to: %s\n", absPath)
+
+	// Install skills
+	if err := installSkills(reader); err != nil {
+		fmt.Printf("Warning: failed to install skills: %v\n", err)
+	}
+
+	fmt.Println()
 	fmt.Println("Setup complete! You can now use 'ralph init' in your project directory.")
 
 	return nil
+}
+
+// installSkills detects Claude config and symlinks ralph skills
+func installSkills(reader *bufio.Reader) error {
+	fmt.Println()
+	fmt.Println("Claude Skills Installation")
+	fmt.Println("--------------------------")
+
+	// Detect Claude config directory
+	claudeDir, err := config.GetClaudeConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to detect Claude config directory: %w", err)
+	}
+
+	// Check if Claude is installed
+	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
+		fmt.Printf("Claude config directory not found at %s\n", claudeDir)
+		fmt.Println("Skipping skills installation. Install Claude Code first, then run 'ralph setup' again.")
+		return nil
+	}
+
+	fmt.Printf("Detected Claude config: %s\n", claudeDir)
+
+	// Get Claude skills directory (resolves symlinks)
+	skillsDir, err := config.GetClaudeSkillsDir()
+	if err != nil {
+		return fmt.Errorf("failed to get Claude skills directory: %w", err)
+	}
+
+	// Create skills directory if it doesn't exist
+	if err := os.MkdirAll(skillsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create skills directory: %w", err)
+	}
+
+	fmt.Printf("Skills directory: %s\n", skillsDir)
+
+	// Find ralph skills directory
+	ralphSkillsDir, err := findRalphSkillsDir()
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Could not auto-detect ralph skills directory.")
+		fmt.Print("Enter path to ralph project (or press Enter to skip): ")
+
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+
+		ralphPath := strings.TrimSpace(input)
+		if ralphPath == "" {
+			fmt.Println("Skipping skills installation.")
+			return nil
+		}
+
+		ralphSkillsDir = filepath.Join(expandTilde(ralphPath), "skills")
+		if _, err := os.Stat(ralphSkillsDir); os.IsNotExist(err) {
+			return fmt.Errorf("skills directory not found at %s", ralphSkillsDir)
+		}
+	}
+
+	fmt.Printf("Ralph skills found: %s\n", ralphSkillsDir)
+	fmt.Println()
+
+	// List and symlink each skill
+	entries, err := os.ReadDir(ralphSkillsDir)
+	if err != nil {
+		return fmt.Errorf("failed to read skills directory: %w", err)
+	}
+
+	installedCount := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		skillName := entry.Name()
+		srcPath := filepath.Join(ralphSkillsDir, skillName)
+		dstPath := filepath.Join(skillsDir, skillName)
+
+		// Check if skill already exists
+		if info, err := os.Lstat(dstPath); err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				// It's a symlink, check if it points to the same place
+				existing, _ := os.Readlink(dstPath)
+				if existing == srcPath {
+					fmt.Printf("  [=] %s (already installed)\n", skillName)
+					continue
+				}
+				// Remove old symlink
+				os.Remove(dstPath)
+			} else {
+				// It's a regular directory, skip
+				fmt.Printf("  [!] %s (skipped: directory already exists)\n", skillName)
+				continue
+			}
+		}
+
+		// Create symlink
+		if err := os.Symlink(srcPath, dstPath); err != nil {
+			fmt.Printf("  [x] %s (failed: %v)\n", skillName, err)
+			continue
+		}
+
+		fmt.Printf("  [+] %s\n", skillName)
+		installedCount++
+	}
+
+	if installedCount > 0 {
+		fmt.Printf("\nInstalled %d skill(s) to Claude.\n", installedCount)
+	}
+
+	return nil
+}
+
+// findRalphSkillsDir attempts to find the ralph skills directory
+func findRalphSkillsDir() (string, error) {
+	var candidates []string
+
+	// Current working directory
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(cwd, "skills"))
+	}
+
+	// Relative to executable
+	if execPath, err := os.Executable(); err == nil {
+		execPath, _ = filepath.EvalSymlinks(execPath)
+		execDir := filepath.Dir(execPath)
+		candidates = append(candidates,
+			filepath.Join(execDir, "skills"),
+			filepath.Join(execDir, "..", "skills"),
+		)
+	}
+
+	for _, dir := range candidates {
+		if isValidSkillsDir(dir) {
+			return filepath.Abs(dir)
+		}
+	}
+
+	return "", fmt.Errorf("could not find ralph skills directory")
+}
+
+// isValidSkillsDir checks if a directory contains valid skills
+func isValidSkillsDir(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	// Check if it contains at least one skill directory with SKILL.md
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			skillFile := filepath.Join(dir, entry.Name(), "SKILL.md")
+			if _, err := os.Stat(skillFile); err == nil {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Init initializes Ralph for the current project

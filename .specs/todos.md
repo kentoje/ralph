@@ -1,2 +1,1 @@
-- add claude code config detection, and symlink skills
 - make any agent cli pluggable?
