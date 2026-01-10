@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -70,6 +71,7 @@ func (s *runState) killCurrentProcess() {
 
 type runModel struct {
 	viewport viewport.Model
+	progress progress.Model
 	content  *strings.Builder
 	lines         []string
 	iteration     int
@@ -193,14 +195,9 @@ func (m runModel) renderProgressBar() string {
 		return runProgressStyle.Render("Progress: No stories loaded")
 	}
 
-	width := 20
-	filled := int(float64(m.completed) / float64(m.total) * float64(width))
-	if filled > width {
-		filled = width
-	}
-
-	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
-	return runProgressStyle.Render(fmt.Sprintf("Progress: %s %d/%d stories complete", bar, m.completed, m.total))
+	percent := float64(m.completed) / float64(m.total)
+	bar := m.progress.ViewAs(percent)
+	return fmt.Sprintf("%s %d/%d stories complete", bar, m.completed, m.total)
 }
 
 // Run executes the autonomous loop with real-time TUI
@@ -237,6 +234,7 @@ func Run(maxIterations int) error {
 
 	m := runModel{
 		viewport:      vp,
+		progress:      progress.New(progress.WithDefaultGradient(), progress.WithWidth(30), progress.WithoutPercentage()),
 		content:       &strings.Builder{},
 		maxIterations: maxIterations,
 		projectDir:    projectDir,
