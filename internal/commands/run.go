@@ -680,8 +680,8 @@ func NewRunModelForTest(opts TestRunOptions) tea.Model {
 }
 
 func saveRunLog(projectDir, branchName, content string) error {
-	// Format: feature-name_2026-01-11.log
-	date := time.Now().Format("2006-01-02")
+	// Format: feature-name_2026-01-11-15-04-05.log
+	date := time.Now().Format("2006-01-02-15-04-05")
 	logPath := filepath.Join(projectDir, "logs", fmt.Sprintf("%s_%s.log", branchName, date))
 
 	// Create all parent directories (handles branch names with slashes like "ralph/feature")
