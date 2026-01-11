@@ -294,12 +294,52 @@ func (m runModel) renderProgressBar() string {
 
 func (m runModel) renderAnimatedLabel(label string) string {
 	var result strings.Builder
-	for i, char := range label {
-		colorIdx := (i + m.colorFrame) % len(spinnerColors)
+	runes := []rune(label)
+	labelLen := len(runes)
+
+	if labelLen == 0 {
+		return ""
+	}
+
+	// Wave head position moves right to left
+	// As colorFrame increases, position decreases (wrapping around)
+	waveHeadPos := (labelLen - 1) - (m.colorFrame % labelLen)
+
+	for i, char := range runes {
+		// Calculate distance from wave head (considering wrap-around)
+		// Positive = behind the wave (already passed), Negative = ahead of wave
+		dist := waveDistance(i, waveHeadPos, labelLen)
+
+		var colorIdx int
+		if dist >= 0 && dist < 3 {
+			// Inside the 3-char wave head - brightest
+			colorIdx = len(spinnerColors) - 1
+		} else if dist >= 3 {
+			// Trailing behind the wave - fade gradient
+			fadeSteps := dist - 3
+			colorIdx = len(spinnerColors) - 1 - (fadeSteps / 2)
+			if colorIdx < 0 {
+				colorIdx = 0
+			}
+		} else {
+			// Ahead of wave - base color
+			colorIdx = 0
+		}
+
 		style := lipgloss.NewStyle().Foreground(spinnerColors[colorIdx])
 		result.WriteString(style.Render(string(char)))
 	}
 	return result.String()
+}
+
+// waveDistance calculates how far behind the wave head a position is
+// Returns: 0-2 = in wave head, 3+ = trailing behind, negative = ahead
+func waveDistance(pos, waveHeadPos, labelLen int) int {
+	diff := pos - waveHeadPos
+	if diff < 0 {
+		diff += labelLen
+	}
+	return diff
 }
 
 func (m runModel) padContentToBottom(content string) string {
@@ -347,7 +387,7 @@ func Run(maxIterations int) error {
 	// Initialize spinner with slower animation
 	s := spinner.New()
 	s.Spinner = spinner.Spinner{
-		Frames: spinner.MiniDot.Frames,
+		Frames: []string{"·", "✻", "✽", "✶", "✳", "✢"},
 		FPS:    time.Second / 7,
 	}
 	s.Style = styles.SpinnerStyle
@@ -570,7 +610,10 @@ func NewRunModelForTest(opts TestRunOptions) tea.Model {
 	vp.SetContent("")
 
 	s := spinner.New()
-	s.Spinner = spinner.MiniDot
+	s.Spinner = spinner.Spinner{
+		Frames: []string{"·", "✻", "✽", "✶", "✳", "✢"},
+		FPS:    time.Second / 7,
+	}
 	s.Style = styles.SpinnerStyle
 
 	return runModel{
