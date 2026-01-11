@@ -91,8 +91,9 @@ type runModel struct {
 	colorFrame       int
 	iteration        int
 	maxIterations    int
-	currentStory     string
-	branch           string
+	currentStory      string
+	currentStoryTitle string
+	branch            string
 	completed        int
 	total            int
 	running          bool
@@ -271,7 +272,11 @@ func (m runModel) View() string {
 		b.WriteString(styles.Muted.Render(fmt.Sprintf("%-8s", "Branch")) + m.branch + "\n")
 	}
 	if m.currentStory != "" {
-		b.WriteString(styles.Muted.Render(fmt.Sprintf("%-8s", "Story")) + m.currentStory + "\n")
+		storyInfo := m.currentStory
+		if m.currentStoryTitle != "" {
+			storyInfo += " - " + m.currentStoryTitle
+		}
+		b.WriteString(styles.Muted.Render(fmt.Sprintf("%-8s", "Story")) + storyInfo + "\n")
 	}
 	b.WriteString("\n")
 
@@ -412,6 +417,7 @@ func Run(maxIterations int) error {
 		m.total = prdData.TotalCount()
 		if next := prdData.NextIncomplete(); next != nil {
 			m.currentStory = next.ID
+			m.currentStoryTitle = next.Title
 		}
 	}
 
@@ -426,6 +432,12 @@ func Run(maxIterations int) error {
 	// Ensure cleanup on exit
 	cancel()
 
+	// Check if run completed successfully (all tasks done)
+	var runSuccess bool
+	if fm, ok := finalModel.(runModel); ok {
+		runSuccess = fm.completed >= fm.total && fm.total > 0 && fm.err == nil
+	}
+
 	// Persist log before exiting
 	if m, ok := finalModel.(runModel); ok && m.content != nil {
 		logContent := m.content.String()
@@ -437,6 +449,14 @@ func Run(maxIterations int) error {
 			if logErr := saveRunLog(projectDir, branchName, logContent); logErr != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to save run log: %v\n", logErr)
 			}
+		}
+	}
+
+	// Auto-archive on successful completion
+	if runSuccess {
+		fmt.Println()
+		if archiveErr := Archive(); archiveErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: auto-archive failed: %v\n", archiveErr)
 		}
 	}
 
