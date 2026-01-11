@@ -175,3 +175,29 @@ func executeCommand(cmd string) error {
 func printHelpFromPicker() {
 	fmt.Print(HelpText)
 }
+
+// NewPickerModel creates a new picker model for testing purposes.
+// Returns tea.Model interface to keep pickerModel unexported.
+func NewPickerModel() tea.Model {
+	items := []list.Item{
+		commandItem{name: "run", description: "Run autonomous loop"},
+		commandItem{name: "init", description: "Initialize project"},
+		commandItem{name: "status", description: "Show project status"},
+		commandItem{name: "prd", description: "Create/edit PRD"},
+		commandItem{name: "list", description: "List all projects"},
+		commandItem{name: "archive", description: "Archive current run"},
+		commandItem{name: "clean", description: "Remove project data"},
+		commandItem{name: "setup", description: "Configure RALPH_HOME"},
+		commandItem{name: "help", description: "Show help"},
+	}
+
+	const listHeight = 14
+
+	l := list.New(items, commandItemDelegate{}, 40, listHeight)
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+	l.SetShowTitle(false)
+	l.SetShowHelp(false)
+
+	return pickerModel{list: l}
+}

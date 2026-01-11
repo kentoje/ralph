@@ -103,7 +103,8 @@ type runModel struct {
 	projectDir       string
 	workingDir       string
 	state            *runState
-	claudeLabelShown bool
+	claudeLabelShown  bool
+	disableAnimations bool // For testing: disables spinner and animated label
 }
 
 type outputMsg struct {
@@ -240,7 +241,7 @@ func (m runModel) View() string {
 
 	// Build viewport content with optional loading text at bottom
 	content := m.content.String()
-	if m.running {
+	if m.running && !m.disableAnimations {
 		label := funLabels[m.labelIndex]
 		loadingText := m.spinner.View() + " " + m.renderAnimatedLabel(label)
 		content += loadingText
@@ -546,6 +547,48 @@ func checkForCompletion(projectDir string) bool {
 		}
 	}
 	return false
+}
+
+// TestRunOptions configures a runModel for testing with deterministic state.
+type TestRunOptions struct {
+	DisableAnimations bool   // Disables spinner and animated label entirely
+	Iteration         int
+	MaxIterations     int
+	Completed         int
+	Total             int
+	Branch            string
+	CurrentStory      string
+	Running           bool
+	Width             int
+	Height            int
+}
+
+// NewRunModelForTest creates a runModel for snapshot testing.
+// Returns tea.Model interface to keep runModel unexported.
+func NewRunModelForTest(opts TestRunOptions) tea.Model {
+	vp := viewport.New(opts.Width, opts.Height-12) // Account for header/footer
+	vp.SetContent("")
+
+	s := spinner.New()
+	s.Spinner = spinner.MiniDot
+	s.Style = styles.SpinnerStyle
+
+	return runModel{
+		viewport:          vp,
+		progress:          progress.New(progress.WithDefaultGradient(), progress.WithWidth(30), progress.WithoutPercentage()),
+		spinner:           s,
+		content:           &strings.Builder{},
+		iteration:         opts.Iteration,
+		maxIterations:     opts.MaxIterations,
+		currentStory:      opts.CurrentStory,
+		branch:            opts.Branch,
+		completed:         opts.Completed,
+		total:             opts.Total,
+		running:           opts.Running,
+		width:             opts.Width,
+		height:            opts.Height,
+		disableAnimations: opts.DisableAnimations,
+	}
 }
 
 func checkAndArchiveOnBranchChange(projectDir string) error {

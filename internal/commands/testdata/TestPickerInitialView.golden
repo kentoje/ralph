@@ -1,0 +1,19 @@
+[?25l[?2004h[K
+  Ralph Commands[K
+[K
+  > run        Run autonomous loop [K
+    init       Initialize project  [K
+    status     Show project status [K
+    prd        Create/edit PRD     [K
+    list       List all projects   [K
+    archive    Archive current run [K
+    clean      Remove project data [K
+    setup      Configure RALPH_HOME[K
+    help       Show help           [K
+                                   [K
+                                   [K
+                                   [K
+                                   [K
+                                   [K
+    ↑/↓ navigate • enter select • q quit[K
+                                        [K
