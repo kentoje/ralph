@@ -421,10 +421,24 @@ func Run(maxIterations int) error {
 	// Start the iteration loop in background
 	go runIterationLoop(ctx, p, state, projectDir, workingDir, maxIterations)
 
-	_, err = p.Run()
+	finalModel, err := p.Run()
 
 	// Ensure cleanup on exit
 	cancel()
+
+	// Persist log before exiting
+	if m, ok := finalModel.(runModel); ok && m.content != nil {
+		logContent := m.content.String()
+		if logContent != "" {
+			branchName := m.branch
+			if branchName == "" {
+				branchName = "unknown"
+			}
+			if logErr := saveRunLog(projectDir, branchName, logContent); logErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to save run log: %v\n", logErr)
+			}
+		}
+	}
 
 	return err
 }
@@ -632,6 +646,19 @@ func NewRunModelForTest(opts TestRunOptions) tea.Model {
 		height:            opts.Height,
 		disableAnimations: opts.DisableAnimations,
 	}
+}
+
+func saveRunLog(projectDir, branchName, content string) error {
+	// Format: feature-name_2026-01-11.log
+	date := time.Now().Format("2006-01-02")
+	logPath := filepath.Join(projectDir, "logs", fmt.Sprintf("%s_%s.log", branchName, date))
+
+	// Create all parent directories (handles branch names with slashes like "ralph/feature")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(logPath, []byte(content), 0644)
 }
 
 func checkAndArchiveOnBranchChange(projectDir string) error {

@@ -11,8 +11,17 @@ import (
 // FormatToolCall formats a tool invocation with pending icon
 func FormatToolCall(name, context string) string {
 	icon := styles.Muted.Render(styles.ToolPending)
+
+	// Use distinct color for Task (sub-agent)
+	var color lipgloss.Color
+	if name == "Task" {
+		color = styles.Agent
+	} else {
+		color = styles.Secondary
+	}
+
 	toolName := lipgloss.NewStyle().
-		Foreground(styles.Secondary).
+		Foreground(color).
 		Bold(true).
 		Render(name)
 

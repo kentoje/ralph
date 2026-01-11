@@ -12,6 +12,7 @@ var (
 	Success = lipgloss.Color("#10B981") // Green
 	Error   = lipgloss.Color("#EF4444") // Red
 	Warning = lipgloss.Color("#F59E0B") // Amber
+	Agent   = lipgloss.Color("#F97316") // Orange for sub-agents
 
 	// Text hierarchy
 	FgBase   = lipgloss.Color("#E5E7EB") // Primary text
