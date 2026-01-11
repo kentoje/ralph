@@ -47,6 +47,17 @@ var funLabels = []string{
 	"Brainstorming intense...",
 	"Eiffel Tower logic loading...",
 	"Fais-moi confiance, I'm fast.",
+	"Baguette power: activated.",
+	"Counting snails... kidding!",
+	"C'est du gâteau, wait.",
+	"Chef de l'IA cooking.",
+	"Vitesse de la lumière, presque.",
+	"T'inquiète, I got this.",
+	"Fait avec amour, et code.",
+	"Adding more butter...",
+	"Mon cerveau chauffe !",
+	"Ready in a flash.",
+	"CPU au max, monsieur.",
 }
 
 // Colors for animated spinner label (light purple shades)
@@ -83,27 +94,27 @@ func (s *runState) killCurrentProcess() {
 }
 
 type runModel struct {
-	viewport   viewport.Model
-	progress   progress.Model
-	spinner    spinner.Model
-	content    *strings.Builder
-	labelIndex       int
-	colorFrame       int
-	iteration        int
-	maxIterations    int
+	viewport          viewport.Model
+	progress          progress.Model
+	spinner           spinner.Model
+	content           *strings.Builder
+	labelIndex        int
+	colorFrame        int
+	iteration         int
+	maxIterations     int
 	currentStory      string
 	currentStoryTitle string
 	branch            string
-	completed        int
-	total            int
-	running          bool
-	done             bool
-	err              error
-	width            int
-	height           int
-	projectDir       string
-	workingDir       string
-	state            *runState
+	completed         int
+	total             int
+	running           bool
+	done              bool
+	err               error
+	width             int
+	height            int
+	projectDir        string
+	workingDir        string
+	state             *runState
 	claudeLabelShown  bool
 	disableAnimations bool // For testing: disables spinner and animated label
 }
@@ -625,7 +636,7 @@ func checkForCompletion(projectDir string) bool {
 
 // TestRunOptions configures a runModel for testing with deterministic state.
 type TestRunOptions struct {
-	DisableAnimations bool   // Disables spinner and animated label entirely
+	DisableAnimations bool // Disables spinner and animated label entirely
 	Iteration         int
 	MaxIterations     int
 	Completed         int
