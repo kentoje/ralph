@@ -17,6 +17,8 @@ internal/commands/picker.go          # Interactive command picker TUI
 internal/commands/commands.go        # Core commands (setup, init, status, prd, archive, clean)
 internal/commands/list.go            # List command with table output
 internal/commands/run.go             # Run command with real-time TUI
+internal/ui/styles/styles.go         # Semantic colors, icons, pre-built styles
+internal/ui/format/format.go         # Reusable formatting helpers
 ```
 
 ### Files Modified
@@ -55,8 +57,13 @@ internal/commands/run.go             # Run command with real-time TUI
 ### Dependencies
 
 - `github.com/charmbracelet/bubbletea` - TUI framework
-- `github.com/charmbracelet/bubbles` - TUI components (viewport, list, progress)
+- `github.com/charmbracelet/bubbles` - TUI components (viewport, list, progress, spinner, table)
 - `github.com/charmbracelet/lipgloss` - Styling
+
+### Internal UI Packages
+
+- `internal/ui/styles` - Semantic color palette (Primary, Secondary, Success, Error, Warning) and icon constants
+- `internal/ui/format` - Formatting helpers for consistent output across all commands
 
 ### Config Location
 
@@ -90,6 +97,10 @@ $RALPH_HOME/projects/<project-id>/
 - Pipes prompt via stdin
 - Streams output to viewport in real-time
 - Context-based cancellation for clean process termination
+- Chat-like UI with "Ralph →" / "Claude →" headers
+- Bottom-aligned viewport (content grows upward)
+- Animated spinner with purple wave effect and rotating labels
+- Status section showing iteration, branch, and story info
 
 ## Completed
 
@@ -118,6 +129,15 @@ $RALPH_HOME/projects/<project-id>/
   - **Dynamic prompt.md location** - `run.go` now uses `config.GetRalphHome()` to find `prompt.md`
   - **Updated fish function** - Reads `ralph_home` from config, binary is at `$ralph_home/ralph`
   - **Updated SKILL.md files** - Use `$(ralph home)/projects/...` instead of hardcoded paths
+
+- [x] UI improvements and design system (2025-01)
+  - **Design system** - Semantic color palette (Primary `#7C3AED`, Secondary `#A78BFA`, Success, Error, Warning) in `internal/ui/styles/`
+  - **Icon constants** - CheckIcon (✓), ErrorIcon (×), WarningIcon (⚠), Arrow (→), Bullet (•), ToolPending (●)
+  - **Format helpers** - Reusable functions in `internal/ui/format/` (FormatHeader, FormatSuccess, FormatWarning, FormatNextStep, FormatKeyValue, FormatBullet, FormatSection, FormatToolCall, FormatPrompt, FormatClaudeHeader)
+  - **Chat-like run UI** - "Ralph →" and "Claude →" headers, bottom-aligned log content growing upward
+  - **Animated spinner** - MiniDot spinner at 7 FPS with purple wave animation (4-color gradient shift per character)
+  - **Rotating labels** - 20 fun French/English loading phrases ("Running on croissants", "Vite, vite, vite...")
+  - **Styled commands** - All commands (init, status, archive, clean, setup) using new format helpers for consistent output
 
 ## Code Architecture
 

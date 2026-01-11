@@ -41,6 +41,8 @@ FormatBullet(item)            // • Item
 FormatSection(title, width)   // ── Title ────────
 FormatToolCall(name, ctx)     // ● ToolName context
 FormatDone(msg)               // ✓ msg
+FormatPrompt(prompt)          // Ralph → + truncated prompt (5 lines)
+FormatClaudeHeader()          // Claude → header
 ```
 
 ## Command Output Patterns
@@ -94,17 +96,22 @@ Progress ████████░░░░░░░░
 
 ### Window Layout
 
-Log viewport at top, all status info below:
+Chat-like UI with log viewport at top (no border), separator line, then status info below:
 
 ```
-╭───────────────────────────────────╮
-│                                   │  ← Empty space (content bottom-aligned)
-│                                   │
-│ ● Read main.go                    │
-│ ✓ Done                            │
-╰───────────────────────────────────╯
+Ralph →
+You are an autonomous coding agent...
+Read the PRD at /path/to/prd.json
+...
+[+127 lines]
 
-Ralph - Iteration 1/25  ⠋ Cooking...
+Claude →
+● Read prd.json
+⠋ Vite, vite, vite...
+
+────────────────────────────────────────
+
+Ralph - Iteration 1/25
 
 ████████░░░░░░░░░░░░░░░░░░ 0/4 stories
 
@@ -114,44 +121,66 @@ Story   US-001
 q quit • ↑/↓ scroll
 ```
 
+### Chat-Like Interface
+
+- **Ralph →** (Primary purple, bold): Shows the prompt sent to Claude
+- **Claude →** (Secondary purple, bold): Shows Claude's responses
+- Prompt is truncated to first 5 lines with `[+N lines]` indicator
+- Claude header appears before first tool call output
+
 ### Bottom-Aligned Log Content
 
 Log content appears at bottom of viewport, growing upward. Empty space fills the top when content is short. Implemented via `padContentToBottom()` helper.
 
-### Animated Rainbow Labels
+### Animated Purple Wave Labels
 
-Loading labels feature a rolling color wave animation:
+Loading labels feature a rolling color wave animation using purple shades:
 
 ```go
-var waveColors = []lipgloss.Color{
-    "#7C3AED", // Purple
-    "#3B82F6", // Blue
-    "#10B981", // Green
-    "#F59E0B", // Yellow
-    "#EF4444", // Red
+var spinnerColors = []lipgloss.Color{
+    "#7C3AED", // Primary purple
+    "#8B5CF6", // Lighter purple
+    "#A78BFA", // Secondary purple
+    "#C4B5FD", // Even lighter purple
 }
 ```
 
-Each character gets a color based on `(position + frame) % 5`. Colors shift left on every spinner tick, creating a wave effect.
+Each character gets a color based on `(position + frame) % 4`. Colors shift on every spinner tick (7 FPS), creating a wave effect.
+
+### Spinner Configuration
+
+- Uses `MiniDot` spinner (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`)
+- Slowed to 7 FPS for smoother animation
+- Loading text appears inside viewport (at bottom)
 
 ### Rotating Label Text
 
-Fun labels rotate each time a new tool is invoked:
-- Cooking...
-- Brewing...
-- Conjuring...
-- Summoning...
-- Crunching...
-- Pondering...
-- Tinkering...
-- Wrangling...
-- Scheming...
-- Vibing...
+Fun French/English labels rotate each time a new tool is invoked:
+- Mijotage de neurones...
+- Wait, I'm cooking.
+- One sec, cooking!
+- Calcul en cours, darling.
+- Thinking cap: ON.
+- Petit moment de magie.
+- Running on croissants.
+- Je pense, therefore... wait.
+- Searching with baguette.
+- Vite, vite, vite...
+- Mode génie activé.
+- Fast as a TGV.
+- Freshly baked logic...
+- C'est presque prêt, promis.
+- Concentration maximale !
+- Small brain, big effort.
+- Juste pour toi...
+- Brainstorming intense...
+- Eiffel Tower logic loading...
+- Fais-moi confiance, I'm fast.
 
 ### Status Section Layout
 
 Aligned key-value format with spacing:
-- Title + spinner + animated label
+- Title (iteration count)
 - Progress bar with story count
 - Branch label (8-char aligned)
 - Story label (8-char aligned)
