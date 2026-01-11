@@ -38,7 +38,7 @@ Ralph is an autonomous agent system that runs Claude Code in a loop to implement
 ralph/
 ├── cmd/ralph/main.go         # Entry point
 ├── internal/
-│   ├── commands/             # CLI commands (run, status, list, etc.)
+│   ├── commands/             # CLI commands (run, status, list, logs, etc.)
 │   ├── config/               # Config management
 │   ├── prd/                  # PRD JSON parsing
 │   ├── project/              # Project directory management
@@ -174,6 +174,7 @@ ralph archive
 | `ralph status` | Show PRD progress |
 | `ralph prd` | Launch Claude for PRD creation |
 | `ralph list` | List all projects with archive counts |
+| `ralph logs` | View run logs (with colors) |
 | `ralph archive` | Archive current run |
 | `ralph clean` | Remove current project data |
 | `ralph clean --all` | Remove all Ralph data |

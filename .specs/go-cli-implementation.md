@@ -16,6 +16,7 @@ internal/prd/prd.go                   # PRD JSON parsing and status
 internal/commands/picker.go          # Interactive command picker TUI
 internal/commands/commands.go        # Core commands (setup, init, status, prd, archive, clean)
 internal/commands/list.go            # List command with table output
+internal/commands/logs.go            # Logs viewer with picker TUI
 internal/commands/run.go             # Run command with real-time TUI
 internal/ui/styles/styles.go         # Semantic colors, icons, pre-built styles
 internal/ui/format/format.go         # Reusable formatting helpers
@@ -42,6 +43,7 @@ internal/ui/format/format.go         # Reusable formatting helpers
 | `ralph prd` | Launch Claude for PRD creation |
 | `ralph run [n]` | Run autonomous loop (default: 10 iterations) |
 | `ralph list` | List all projects with archive counts |
+| `ralph logs` | View run logs (with ANSI colors) |
 | `ralph archive` | Archive current run |
 | `ralph clean [--all]` | Remove project data |
 
@@ -138,6 +140,11 @@ $RALPH_HOME/projects/<project-id>/
   - **Animated spinner** - MiniDot spinner at 7 FPS with purple wave animation (4-color gradient shift per character)
   - **Rotating labels** - 20 fun French/English loading phrases ("Running on croissants", "Vite, vite, vite...")
   - **Styled commands** - All commands (init, status, archive, clean, setup) using new format helpers for consistent output
+
+- [x] Logs viewer and sub-agent visibility (2026-01)
+  - **`ralph logs` command** - Interactive picker showing all log files sorted by date, uses `cat` to render ANSI colors
+  - **Task tool highlighting** - Sub-agent spawning (Task tool) now displays in orange (`#F97316`) instead of purple for visibility
+  - **Log directory fix** - Branch names with slashes (e.g., `ralph/feature`) now create nested log directories correctly
 
 ## Code Architecture
 

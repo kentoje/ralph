@@ -49,6 +49,8 @@ func main() {
 		err = commands.Prd()
 	case "list":
 		err = commands.List()
+	case "logs":
+		err = commands.Logs()
 	case "archive":
 		err = commands.Archive()
 	case "clean":

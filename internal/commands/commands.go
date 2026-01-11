@@ -43,6 +43,7 @@ Commands:
   status       Show current project status
   prd          Launch Claude for PRD creation
   list         List all projects with archive info
+  logs         View run logs
   archive      Manually archive current run
   clean        Remove project data (--all for everything)
 
@@ -51,6 +52,7 @@ Examples:
   ralph home         # Print RALPH_HOME path
   ralph run          # Run with 25 iterations
   ralph run 5        # Run with 5 iterations
+  ralph logs         # View run logs
   ralph clean --all  # Remove all project data
 `
 

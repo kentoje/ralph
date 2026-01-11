@@ -144,6 +144,7 @@ cp skills/ralph/SKILL.md "$SKILLS_DIR/ralph/"
 | `ralph status` | Show PRD progress |
 | `ralph prd` | Launch Claude for PRD creation |
 | `ralph list` | List all projects |
+| `ralph logs` | View run logs (with colors) |
 | `ralph archive` | Archive current run |
 | `ralph clean` | Remove current project data |
 

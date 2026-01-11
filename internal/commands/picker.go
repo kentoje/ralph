@@ -26,6 +26,7 @@ func commandItems() []list.Item {
 		commandItem{name: "status", description: "Show project status"},
 		commandItem{name: "prd", description: "Create/edit PRD"},
 		commandItem{name: "list", description: "List all projects"},
+		commandItem{name: "logs", description: "View run logs"},
 		commandItem{name: "archive", description: "Archive current run"},
 		commandItem{name: "clean", description: "Remove project data"},
 		commandItem{name: "setup", description: "Configure RALPH_HOME"},
@@ -161,6 +162,8 @@ func executeCommand(cmd string) error {
 		return Prd()
 	case "list":
 		return List()
+	case "logs":
+		return Logs()
 	case "archive":
 		return Archive()
 	case "clean":
