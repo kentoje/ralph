@@ -22,22 +22,6 @@ func FormatToolCall(name, context string) string {
 	return fmt.Sprintf("%s %s", icon, toolName)
 }
 
-// FormatToolDone formats a tool completion with success/error icon
-func FormatToolDone(name string, success bool) string {
-	var icon string
-	var iconStyle lipgloss.Style
-
-	if success {
-		icon = styles.CheckIcon
-		iconStyle = styles.SuccessText
-	} else {
-		icon = styles.ErrorIcon
-		iconStyle = styles.ErrorText
-	}
-
-	return fmt.Sprintf("%s %s", iconStyle.Render(icon), styles.Muted.Render(name))
-}
-
 // FormatError formats an error message with a prominent label
 func FormatError(msg string) string {
 	label := lipgloss.NewStyle().
@@ -66,21 +50,6 @@ func FormatSection(title string, width int) string {
 // FormatDone formats a completion message
 func FormatDone(msg string) string {
 	return styles.SuccessText.Render(styles.CheckIcon + " " + msg)
-}
-
-// FormatResult formats the final result summary
-func FormatResult(status string, durationSec float64, turns int) string {
-	parts := []string{styles.SuccessText.Render(styles.CheckIcon)}
-	parts = append(parts, styles.Muted.Render(status))
-
-	if durationSec > 0 {
-		parts = append(parts, styles.Subtle.Render(fmt.Sprintf("in %.1fs", durationSec)))
-	}
-	if turns > 0 {
-		parts = append(parts, styles.Subtle.Render(fmt.Sprintf("(%d turns)", turns)))
-	}
-
-	return strings.Join(parts, " ")
 }
 
 // FormatHeader renders a styled command header

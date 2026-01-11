@@ -18,6 +18,21 @@ var (
 	pickerHelpStyle     = lipgloss.NewStyle().PaddingLeft(4).PaddingBottom(1).Foreground(styles.FgSubtle)
 )
 
+// commandItems returns the list of available commands for the picker
+func commandItems() []list.Item {
+	return []list.Item{
+		commandItem{name: "run", description: "Run autonomous loop"},
+		commandItem{name: "init", description: "Initialize project"},
+		commandItem{name: "status", description: "Show project status"},
+		commandItem{name: "prd", description: "Create/edit PRD"},
+		commandItem{name: "list", description: "List all projects"},
+		commandItem{name: "archive", description: "Archive current run"},
+		commandItem{name: "clean", description: "Remove project data"},
+		commandItem{name: "setup", description: "Configure RALPH_HOME"},
+		commandItem{name: "help", description: "Show help"},
+	}
+}
+
 type commandItem struct {
 	name        string
 	description string
@@ -108,21 +123,9 @@ func (m pickerModel) View() string {
 }
 
 func RunInteractivePicker() error {
-	items := []list.Item{
-		commandItem{name: "run", description: "Run autonomous loop"},
-		commandItem{name: "init", description: "Initialize project"},
-		commandItem{name: "status", description: "Show project status"},
-		commandItem{name: "prd", description: "Create/edit PRD"},
-		commandItem{name: "list", description: "List all projects"},
-		commandItem{name: "archive", description: "Archive current run"},
-		commandItem{name: "clean", description: "Remove project data"},
-		commandItem{name: "setup", description: "Configure RALPH_HOME"},
-		commandItem{name: "help", description: "Show help"},
-	}
-
 	const listHeight = 14
 
-	l := list.New(items, commandItemDelegate{}, 40, listHeight)
+	l := list.New(commandItems(), commandItemDelegate{}, 40, listHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowTitle(false)
@@ -179,21 +182,9 @@ func printHelpFromPicker() {
 // NewPickerModel creates a new picker model for testing purposes.
 // Returns tea.Model interface to keep pickerModel unexported.
 func NewPickerModel() tea.Model {
-	items := []list.Item{
-		commandItem{name: "run", description: "Run autonomous loop"},
-		commandItem{name: "init", description: "Initialize project"},
-		commandItem{name: "status", description: "Show project status"},
-		commandItem{name: "prd", description: "Create/edit PRD"},
-		commandItem{name: "list", description: "List all projects"},
-		commandItem{name: "archive", description: "Archive current run"},
-		commandItem{name: "clean", description: "Remove project data"},
-		commandItem{name: "setup", description: "Configure RALPH_HOME"},
-		commandItem{name: "help", description: "Show help"},
-	}
-
 	const listHeight = 14
 
-	l := list.New(items, commandItemDelegate{}, 40, listHeight)
+	l := list.New(commandItems(), commandItemDelegate{}, 40, listHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowTitle(false)

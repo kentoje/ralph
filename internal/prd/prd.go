@@ -39,16 +39,6 @@ func Load(projectDir string) (*PRD, error) {
 	return &prd, nil
 }
 
-// Save writes the prd.json file to a project directory
-func Save(projectDir string, prd *PRD) error {
-	path := filepath.Join(projectDir, "prd.json")
-	data, err := json.MarshalIndent(prd, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 // Exists checks if prd.json exists in a project directory
 func Exists(projectDir string) bool {
 	path := filepath.Join(projectDir, "prd.json")

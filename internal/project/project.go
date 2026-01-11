@@ -37,17 +37,6 @@ func GetProjectDir() (string, error) {
 	return filepath.Join(ralphHome, "projects", projectID), nil
 }
 
-// GetProjectDirForPath returns the project data directory for a given path
-func GetProjectDirForPath(path string) (string, error) {
-	ralphHome, err := config.GetRalphHome()
-	if err != nil {
-		return "", err
-	}
-
-	projectID := GetProjectID(path)
-	return filepath.Join(ralphHome, "projects", projectID), nil
-}
-
 // EnsureProjectDir creates the project directory if it doesn't exist
 func EnsureProjectDir() (string, error) {
 	dir, err := GetProjectDir()

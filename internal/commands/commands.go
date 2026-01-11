@@ -25,6 +25,9 @@ const (
 	MinNameDisplayLen    = 20
 )
 
+// projectRunFiles are the files managed during a run (used by clean command)
+var projectRunFiles = []string{"prd.json", "prd.md", "progress.txt", ".last-branch"}
+
 // HelpText is the CLI help message
 const HelpText = `Ralph - Autonomous Agent CLI
 
@@ -36,7 +39,7 @@ Commands:
   setup        Configure RALPH_HOME path
   home         Print RALPH_HOME path
   init         Initialize Ralph for current project
-  run [n]      Run autonomous loop (default: 10 iterations)
+  run [n]      Run autonomous loop (default: 25 iterations)
   status       Show current project status
   prd          Launch Claude for PRD creation
   list         List all projects with archive info
@@ -46,7 +49,7 @@ Commands:
 Examples:
   ralph              # Interactive mode
   ralph home         # Print RALPH_HOME path
-  ralph run          # Run with 10 iterations
+  ralph run          # Run with 25 iterations
   ralph run 5        # Run with 5 iterations
   ralph clean --all  # Remove all project data
 `
@@ -540,8 +543,7 @@ func Clean(all bool) error {
 		fmt.Println(format.FormatBullet("All project data including archives"))
 		fmt.Println(format.FormatBullet(projectDir))
 	} else {
-		files := []string{"prd.json", "prd.md", "progress.txt", ".last-branch"}
-		for _, file := range files {
+		for _, file := range projectRunFiles {
 			fmt.Println(format.FormatBullet(file))
 		}
 		fmt.Println()
@@ -574,8 +576,7 @@ func Clean(all bool) error {
 		fmt.Println(format.FormatSuccess("Removed all project data"))
 	} else {
 		// Remove only current run files (not archive)
-		files := []string{"prd.json", "prd.md", "progress.txt", ".last-branch"}
-		for _, file := range files {
+		for _, file := range projectRunFiles {
 			path := filepath.Join(projectDir, file)
 			os.Remove(path)
 		}
