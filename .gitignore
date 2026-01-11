@@ -2,7 +2,7 @@ projects/*
 !projects/.gitkeep
 
 # Compiled binary
-ralph
+/ralph
 
 # OS-specific
 .DS_Store
