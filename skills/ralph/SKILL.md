@@ -18,14 +18,17 @@ Take a PRD (markdown file or text) and convert it to `prd.json`.
 ### Auto-detect Project Directory
 
 1. Get home directory:
+
    ```bash
    echo $HOME
    ```
 
 2. Get project ID from current working directory:
+
    ```bash
    pwd | sed 's|^/||' | tr '/' '-' | tr '[:upper:]' '[:lower:]'
    ```
+
    Example: `/Volumes/HomeX/kento/Documents/gitlab/assets-page` → `volumes-homex-kento-documents-gitlab-assets-page`
 
 3. Save `prd.json` to:
@@ -34,6 +37,7 @@ Take a PRD (markdown file or text) and convert it to `prd.json`.
    ```
 
 **CRITICAL: Path Handling**
+
 - NEVER assume `$HOME` equals `/Users/username` — it varies by system
 - ALWAYS use bash to expand paths first
 - Use the full expanded path (e.g., `/Volumes/HomeX/kento/...`) in Write tool calls
@@ -174,6 +178,73 @@ If a PRD has big features, split them:
 6. US-006: Add notification preferences page
 
 Each is one focused change that can be completed and verified independently.
+
+---
+
+## Specifications for Complex Features
+
+For features with significant logic or multiple components, create specification files in the project's `.specs/` directory.
+
+### When to Create Specs
+
+- Feature has complex business logic
+- Multiple stories will reference the same requirements
+- Technical decisions need documenting (API contracts, data models)
+- The feature spans more than 4-5 stories
+
+### Specs Structure
+
+```
+<project-root>/.specs/
+├── feature-name.md       # Feature specification
+├── api-contracts.md      # API definitions (if applicable)
+└── data-models.md        # Schema/type definitions
+```
+
+### Spec File Format
+
+```markdown
+# [Feature Name] Specification
+
+## Overview
+
+Brief description of the feature.
+
+## Requirements
+
+- REQ-1: Specific requirement
+- REQ-2: Another requirement
+
+## Technical Decisions
+
+- Decision 1: We chose X because Y
+- Decision 2: Pattern Z will be used for...
+
+## Data Model
+
+[Schema definitions, types, etc.]
+
+## API Contract (if applicable)
+
+[Endpoints, request/response formats]
+```
+
+### Why Specs Matter
+
+Ralph reads specs at the start of **EVERY iteration**. Well-written specs:
+
+- Prevent Ralph from making inconsistent decisions across iterations
+- Provide deterministic context loading (same files every loop)
+- Serve as single source of truth for requirements
+- Help future iterations understand the "why" behind decisions
+
+### When Converting PRD to prd.json
+
+If the PRD describes a complex feature, suggest creating specs:
+
+1. Identify if the feature has complex logic or multiple interdependent parts
+2. If so, create `.specs/<feature-name>.md` with the key decisions and contracts
+3. Reference the spec in story descriptions: "Implement per .specs/feature-name.md"
 
 ---
 
