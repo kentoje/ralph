@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,26 +21,41 @@ import (
 	"github.com/kento/ralph/internal/prd"
 	"github.com/kento/ralph/internal/project"
 	"github.com/kento/ralph/internal/stream"
+	"github.com/kento/ralph/internal/ui/format"
+	"github.com/kento/ralph/internal/ui/styles"
 )
 
-var (
-	runTitleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("170")).
-			Padding(0, 1)
+// Fun rotating labels for the spinner
+var funLabels = []string{
+	"Mijotage de neurones...",
+	"Wait, I'm cooking.",
+	"One sec, cooking!",
+	"Calcul en cours, darling.",
+	"Thinking cap: ON.",
+	"Petit moment de magie.",
+	"Running on croissants.",
+	"Je pense, therefore... wait.",
+	"Searching with baguette.",
+	"Vite, vite, vite...",
+	"Mode génie activé.",
+	"Fast as a TGV.",
+	"Freshly baked logic...",
+	"C'est presque prêt, promis.",
+	"Concentration maximale !",
+	"Small brain, big effort.",
+	"Juste pour toi...",
+	"Brainstorming intense...",
+	"Eiffel Tower logic loading...",
+	"Fais-moi confiance, I'm fast.",
+}
 
-	runInfoStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252")).
-			Padding(0, 1)
-
-	runBorderStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("240"))
-
-	runHelpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Padding(0, 1)
-)
+// Colors for animated spinner label (light purple shades)
+var spinnerColors = []lipgloss.Color{
+	lipgloss.Color("#7C3AED"), // Primary purple
+	lipgloss.Color("#8B5CF6"), // Lighter purple
+	lipgloss.Color("#A78BFA"), // Secondary purple
+	lipgloss.Color("#C4B5FD"), // Even lighter purple
+}
 
 // runState holds shared state between TUI and runner goroutine
 type runState struct {
@@ -67,26 +83,35 @@ func (s *runState) killCurrentProcess() {
 }
 
 type runModel struct {
-	viewport viewport.Model
-	progress progress.Model
-	content  *strings.Builder
-	iteration     int
-	maxIterations int
-	currentStory  string
-	branch        string
-	completed     int
-	total         int
-	running       bool
-	done          bool
-	err           error
-	width         int
-	height        int
-	projectDir    string
-	workingDir    string
-	state         *runState
+	viewport   viewport.Model
+	progress   progress.Model
+	spinner    spinner.Model
+	content    *strings.Builder
+	labelIndex       int
+	colorFrame       int
+	iteration        int
+	maxIterations    int
+	currentStory     string
+	branch           string
+	completed        int
+	total            int
+	running          bool
+	done             bool
+	err              error
+	width            int
+	height           int
+	projectDir       string
+	workingDir       string
+	state            *runState
+	claudeLabelShown bool
 }
 
-type outputMsg string
+type outputMsg struct {
+	result stream.ParseResult
+}
+type promptMsg struct {
+	content string
+}
 type iterationCompleteMsg struct {
 	success bool
 }
@@ -96,7 +121,7 @@ type runDoneMsg struct {
 }
 
 func (m runModel) Init() tea.Cmd {
-	return nil
+	return m.spinner.Tick
 }
 
 func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -106,10 +131,11 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		headerHeight := 4
-		footerHeight := 3
+		headerHeight := 0
+		footerHeight := 8
 		m.viewport.Width = msg.Width - 4
 		m.viewport.Height = msg.Height - headerHeight - footerHeight - 4
+		m.viewport.SetContent(m.padContentToBottom(m.content.String()))
 		return m, nil
 
 	case tea.KeyMsg:
@@ -123,17 +149,68 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case outputMsg:
-		line := string(msg)
-		m.content.WriteString(line + "\n")
-		m.viewport.SetContent(m.content.String())
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		m.colorFrame++
+		return m, cmd
+
+	case promptMsg:
+		// Display the prompt with "Ralph →" header
+		line := format.FormatPrompt(msg.content)
+		m.content.WriteString(line + "\n\n")
+		m.viewport.SetContent(m.padContentToBottom(m.content.String()))
 		m.viewport.GotoBottom()
+		// Reset Claude label for new prompt
+		m.claudeLabelShown = false
+
+	case outputMsg:
+		result := msg.result
+
+		// Add "Claude →" header before first output
+		if !m.claudeLabelShown {
+			m.content.WriteString(format.FormatClaudeHeader() + "\n")
+			m.claudeLabelShown = true
+		}
+
+		// Rotate label on tool calls
+		if result.Type == stream.OutputToolCall {
+			m.labelIndex = (m.labelIndex + 1) % len(funLabels)
+		}
+
+		// Format the output based on type
+		var line string
+		switch result.Type {
+		case stream.OutputToolCall:
+			line = format.FormatToolCall(result.ToolName, result.Context)
+		case stream.OutputResult:
+			line = format.FormatDone(result.Display)
+		case stream.OutputError:
+			line = format.FormatError(result.Display)
+		default:
+			line = result.Display
+		}
+
+		if line != "" {
+			m.content.WriteString(line + "\n")
+			m.viewport.SetContent(m.padContentToBottom(m.content.String()))
+			m.viewport.GotoBottom()
+		}
 
 	case iterationCompleteMsg:
 		if msg.success {
 			m.completed++
 		}
 		m.iteration++
+
+		// Add iteration separator
+		if m.iteration < m.maxIterations && m.completed < m.total {
+			separator := format.FormatSection(fmt.Sprintf("Iteration %d", m.iteration+1), m.width-4)
+			m.content.WriteString("\n" + separator + "\n\n")
+			m.viewport.SetContent(m.padContentToBottom(m.content.String()))
+			m.viewport.GotoBottom()
+		}
+
 		if m.iteration >= m.maxIterations || m.completed >= m.total {
 			m.done = true
 			m.running = false
@@ -161,25 +238,44 @@ func (m runModel) View() string {
 
 	var b strings.Builder
 
-	// Viewport with output
-	viewportContent := runBorderStyle.Render(m.viewport.View())
-	b.WriteString(viewportContent + "\n\n")
-
-	// Progress bar
-	progress := m.renderProgressBar()
-	b.WriteString(progress + "\n\n")
-
-	// Info (moved to bottom)
-	title := runTitleStyle.Render(fmt.Sprintf("Ralph - Iteration %d/%d", m.iteration+1, m.maxIterations))
-	storyInfo := runInfoStyle.Render(m.currentStory)
-	b.WriteString(fmt.Sprintf("%s %s\n", title, storyInfo))
-
-	if m.branch != "" {
-		b.WriteString(runInfoStyle.Render(fmt.Sprintf("Branch: %s", m.branch)) + "\n")
+	// Build viewport content with optional loading text at bottom
+	content := m.content.String()
+	if m.running {
+		label := funLabels[m.labelIndex]
+		loadingText := m.spinner.View() + " " + m.renderAnimatedLabel(label)
+		content += loadingText
 	}
 
+	// Create a temporary viewport with the content including loading text
+	tempViewport := m.viewport
+	tempViewport.SetContent(m.padContentToBottom(content))
+
+	// Viewport with output (at top)
+	b.WriteString(tempViewport.View() + "\n")
+
+	// Separator line between logs and status
+	separator := styles.Subtle.Render(strings.Repeat("─", m.width))
+	b.WriteString(separator + "\n\n")
+
+	// Title (without spinner - it's now in viewport)
+	title := styles.Title.Render(fmt.Sprintf("Ralph - Iteration %d/%d", m.iteration+1, m.maxIterations))
+	b.WriteString(title + "\n\n")
+
+	// Progress bar
+	progressBar := m.renderProgressBar()
+	b.WriteString(progressBar + "\n\n")
+
+	// Info section with aligned labels
+	if m.branch != "" {
+		b.WriteString(styles.Muted.Render(fmt.Sprintf("%-8s", "Branch")) + m.branch + "\n")
+	}
+	if m.currentStory != "" {
+		b.WriteString(styles.Muted.Render(fmt.Sprintf("%-8s", "Story")) + m.currentStory + "\n")
+	}
+	b.WriteString("\n")
+
 	// Help
-	help := runHelpStyle.Render("q quit")
+	help := styles.Subtle.Render("q quit • ↑/↓ scroll")
 	b.WriteString(help)
 
 	return b.String()
@@ -187,12 +283,32 @@ func (m runModel) View() string {
 
 func (m runModel) renderProgressBar() string {
 	if m.total == 0 {
-		return runInfoStyle.Render("Progress: No stories loaded")
+		return styles.Muted.Render("Progress: No stories loaded")
 	}
 
 	percent := float64(m.completed) / float64(m.total)
 	bar := m.progress.ViewAs(percent)
 	return fmt.Sprintf("%s %d/%d stories complete", bar, m.completed, m.total)
+}
+
+func (m runModel) renderAnimatedLabel(label string) string {
+	var result strings.Builder
+	for i, char := range label {
+		colorIdx := (i + m.colorFrame) % len(spinnerColors)
+		style := lipgloss.NewStyle().Foreground(spinnerColors[colorIdx])
+		result.WriteString(style.Render(string(char)))
+	}
+	return result.String()
+}
+
+func (m runModel) padContentToBottom(content string) string {
+	lines := strings.Split(content, "\n")
+	contentHeight := len(lines)
+	if contentHeight >= m.viewport.Height {
+		return content
+	}
+	padding := strings.Repeat("\n", m.viewport.Height-contentHeight)
+	return padding + content
 }
 
 // Run executes the autonomous loop with real-time TUI
@@ -227,9 +343,18 @@ func Run(maxIterations int) error {
 	vp := viewport.New(80, 20)
 	vp.SetContent("")
 
+	// Initialize spinner with slower animation
+	s := spinner.New()
+	s.Spinner = spinner.Spinner{
+		Frames: spinner.MiniDot.Frames,
+		FPS:    time.Second / 7,
+	}
+	s.Style = styles.SpinnerStyle
+
 	m := runModel{
 		viewport:      vp,
 		progress:      progress.New(progress.WithDefaultGradient(), progress.WithWidth(30), progress.WithoutPercentage()),
+		spinner:       s,
 		content:       &strings.Builder{},
 		maxIterations: maxIterations,
 		projectDir:    projectDir,
@@ -296,6 +421,9 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		prompt = strings.ReplaceAll(prompt, "{{PROJECT_DIR}}", projectDir)
 		prompt = strings.ReplaceAll(prompt, "{{WORKING_DIR}}", workingDir)
 
+		// Send prompt to TUI for display
+		p.Send(promptMsg{content: prompt})
+
 		// Run claude with context - pipe prompt via stdin with streaming output
 		cmd := exec.CommandContext(ctx, "claude", "--dangerously-skip-permissions", "-p", "--output-format", "stream-json")
 		cmd.Dir = workingDir
@@ -361,7 +489,10 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		if err != nil {
 			// Don't report error if we were cancelled
 			if ctx.Err() == nil {
-				p.Send(outputMsg(fmt.Sprintf("Command error: %v", err)))
+				p.Send(outputMsg{result: stream.ParseResult{
+					Display: fmt.Sprintf("Command error: %v", err),
+					Type:    stream.OutputError,
+				}})
 			}
 		}
 
@@ -374,7 +505,10 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 			if prd.Exists(projectDir) {
 				prdData, _ := prd.Load(projectDir)
 				if prdData != nil && prdData.IsComplete() {
-					p.Send(outputMsg("All stories complete!"))
+					p.Send(outputMsg{result: stream.ParseResult{
+						Display: "All stories complete!",
+						Type:    stream.OutputResult,
+					}})
 					p.Send(runDoneMsg{success: true})
 					return
 				}
@@ -397,8 +531,8 @@ func streamOutput(p *tea.Program, r io.Reader) {
 	parser := stream.NewParser()
 	for scanner.Scan() {
 		result := parser.ParseLine(scanner.Text())
-		if !result.IsEmpty && result.Display != "" {
-			p.Send(outputMsg(result.Display))
+		if !result.IsEmpty {
+			p.Send(outputMsg{result: result})
 		}
 	}
 }

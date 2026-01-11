@@ -9,6 +9,16 @@ import (
 	streamingjson "github.com/karminski/streaming-json-go"
 )
 
+// OutputType categorizes the type of output for styling
+type OutputType int
+
+const (
+	OutputText OutputType = iota
+	OutputToolCall
+	OutputResult
+	OutputError
+)
+
 // Parser handles parsing of stream-json output from Claude
 type Parser struct{}
 
@@ -19,8 +29,11 @@ func NewParser() *Parser {
 
 // ParseResult holds the formatted output from parsing
 type ParseResult struct {
-	Display string // Formatted string for display
-	IsEmpty bool   // True if nothing to display
+	Display  string     // Formatted string for display
+	Type     OutputType // Type of output for styling
+	ToolName string     // Tool name for tool calls
+	Context  string     // Context info for tool calls
+	IsEmpty  bool       // True if nothing to display
 }
 
 // ParseLine parses a JSON line and returns formatted output
@@ -64,29 +77,30 @@ func (p *Parser) parseAssistant(jsonStr string) ParseResult {
 		return ParseResult{IsEmpty: true}
 	}
 
-	var outputs []string
-
+	// Process content blocks - prioritize tool calls
 	for _, block := range event.Message.Content {
 		switch block.Type {
-		case "text":
-			if block.Text != "" {
-				outputs = append(outputs, block.Text)
-			}
 		case "tool_use":
 			context := extractToolContext(block.Name, block.Input)
-			if context != "" {
-				outputs = append(outputs, fmt.Sprintf("[%s] %s", block.Name, context))
-			} else {
-				outputs = append(outputs, fmt.Sprintf("[%s]", block.Name))
+			return ParseResult{
+				Display:  context,
+				Type:     OutputToolCall,
+				ToolName: block.Name,
+				Context:  context,
+				IsEmpty:  false,
+			}
+		case "text":
+			if block.Text != "" {
+				return ParseResult{
+					Display: block.Text,
+					Type:    OutputText,
+					IsEmpty: false,
+				}
 			}
 		}
 	}
 
-	if len(outputs) == 0 {
-		return ParseResult{IsEmpty: true}
-	}
-
-	return ParseResult{Display: strings.Join(outputs, "\n")}
+	return ParseResult{IsEmpty: true}
 }
 
 func (p *Parser) parseResult(jsonStr string) ParseResult {
@@ -103,7 +117,7 @@ func (p *Parser) parseResult(jsonStr string) ParseResult {
 	durationSec := float64(result.DurationMs) / 1000.0
 
 	var parts []string
-	parts = append(parts, fmt.Sprintf("[Done] %s", capitalize(status)))
+	parts = append(parts, capitalize(status))
 
 	if result.DurationMs > 0 {
 		parts = append(parts, fmt.Sprintf("in %.1fs", durationSec))
@@ -112,7 +126,11 @@ func (p *Parser) parseResult(jsonStr string) ParseResult {
 		parts = append(parts, fmt.Sprintf("(%d turns)", result.NumTurns))
 	}
 
-	return ParseResult{Display: strings.Join(parts, " ")}
+	return ParseResult{
+		Display: strings.Join(parts, " "),
+		Type:    OutputResult,
+		IsEmpty: false,
+	}
 }
 
 // extractToolContext extracts a brief context string from tool input

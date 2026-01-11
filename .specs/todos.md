@@ -1,1 +1,2 @@
 - make any agent cli pluggable?
+- change prompt so that we leverage multi sub agent. (parallel tasks, test/build sub agent task)

@@ -9,9 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/kento/ralph/internal/config"
 	"github.com/kento/ralph/internal/prd"
 	"github.com/kento/ralph/internal/project"
+	"github.com/kento/ralph/internal/ui/format"
+	"github.com/kento/ralph/internal/ui/styles"
 )
 
 // Constants
@@ -69,8 +72,7 @@ func expandTilde(path string) string {
 
 // Setup configures the RALPH_HOME path and installs skills
 func Setup() error {
-	fmt.Println("Ralph Setup")
-	fmt.Println("===========")
+	fmt.Println(format.FormatHeader("Ralph Setup"))
 	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)
@@ -79,10 +81,11 @@ func Setup() error {
 	// Check for existing config
 	existingCfg, _ := config.Load()
 	if existingCfg != nil {
-		fmt.Printf("Current RALPH_HOME: %s\n", existingCfg.RalphHome)
-		fmt.Print("Enter new path (or press Enter to keep current): ")
+		fmt.Println(format.FormatKeyValue("Current RALPH_HOME", existingCfg.RalphHome))
+		fmt.Print(styles.Muted.Render("Enter new path (or press Enter to keep current): "))
 	} else {
-		fmt.Printf("Enter path for RALPH_HOME (or press Enter to use current directory: %s): ", cwd)
+		fmt.Println(styles.Muted.Render("Enter path for RALPH_HOME"))
+		fmt.Print(styles.Muted.Render(fmt.Sprintf("(or press Enter to use current directory: %s): ", cwd)))
 	}
 
 	input, err := reader.ReadString('\n')
@@ -94,10 +97,10 @@ func Setup() error {
 
 	// Keep existing if empty input and config exists
 	if path == "" && existingCfg != nil {
-		fmt.Println("Keeping existing configuration.")
+		fmt.Println(styles.Muted.Render("Keeping existing configuration."))
 		// Still try to install skills
 		if err := installSkills(reader); err != nil {
-			fmt.Printf("Warning: failed to install skills: %v\n", err)
+			fmt.Println(format.FormatWarning(fmt.Sprintf("Failed to install skills: %v", err)))
 		}
 		return nil
 	}
@@ -132,15 +135,16 @@ func Setup() error {
 	}
 
 	fmt.Println()
-	fmt.Printf("RALPH_HOME set to: %s\n", absPath)
+	fmt.Println(format.FormatKeyValue("RALPH_HOME set to", absPath))
 
 	// Install skills
 	if err := installSkills(reader); err != nil {
-		fmt.Printf("Warning: failed to install skills: %v\n", err)
+		fmt.Println(format.FormatWarning(fmt.Sprintf("Failed to install skills: %v", err)))
 	}
 
 	fmt.Println()
-	fmt.Println("Setup complete! You can now use 'ralph init' in your project directory.")
+	fmt.Println(format.FormatSuccess("Setup complete!"))
+	fmt.Println(format.FormatNextStep("ralph init", "in your project directory to get started"))
 
 	return nil
 }
@@ -148,8 +152,8 @@ func Setup() error {
 // installSkills detects Claude config and symlinks ralph skills
 func installSkills(reader *bufio.Reader) error {
 	fmt.Println()
-	fmt.Println("Claude Skills Installation")
-	fmt.Println("--------------------------")
+	fmt.Println(format.FormatHeader("Claude Skills Installation"))
+	fmt.Println()
 
 	// Detect Claude config directory
 	claudeDir, err := config.GetClaudeConfigDir()
@@ -159,12 +163,12 @@ func installSkills(reader *bufio.Reader) error {
 
 	// Check if Claude is installed
 	if _, err := os.Stat(claudeDir); os.IsNotExist(err) {
-		fmt.Printf("Claude config directory not found at %s\n", claudeDir)
-		fmt.Println("Skipping skills installation. Install Claude Code first, then run 'ralph setup' again.")
+		fmt.Println(styles.Muted.Render(fmt.Sprintf("Claude config not found at %s", claudeDir)))
+		fmt.Println(styles.Muted.Render("Skipping skills installation. Install Claude Code first."))
 		return nil
 	}
 
-	fmt.Printf("Detected Claude config: %s\n", claudeDir)
+	fmt.Println(format.FormatKeyValue("Claude config", claudeDir))
 
 	// Get Claude skills directory (resolves symlinks)
 	skillsDir, err := config.GetClaudeSkillsDir()
@@ -177,14 +181,14 @@ func installSkills(reader *bufio.Reader) error {
 		return fmt.Errorf("failed to create skills directory: %w", err)
 	}
 
-	fmt.Printf("Skills directory: %s\n", skillsDir)
+	fmt.Println(format.FormatKeyValue("Skills directory", skillsDir))
 
 	// Find ralph skills directory
 	ralphSkillsDir, err := findRalphSkillsDir()
 	if err != nil {
 		fmt.Println()
-		fmt.Println("Could not auto-detect ralph skills directory.")
-		fmt.Print("Enter path to ralph project (or press Enter to skip): ")
+		fmt.Println(styles.Muted.Render("Could not auto-detect ralph skills directory."))
+		fmt.Print(styles.Muted.Render("Enter path to ralph project (or press Enter to skip): "))
 
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -193,7 +197,7 @@ func installSkills(reader *bufio.Reader) error {
 
 		ralphPath := strings.TrimSpace(input)
 		if ralphPath == "" {
-			fmt.Println("Skipping skills installation.")
+			fmt.Println(styles.Muted.Render("Skipping skills installation."))
 			return nil
 		}
 
@@ -203,7 +207,7 @@ func installSkills(reader *bufio.Reader) error {
 		}
 	}
 
-	fmt.Printf("Ralph skills found: %s\n", ralphSkillsDir)
+	fmt.Println(format.FormatKeyValue("Ralph skills", ralphSkillsDir))
 	fmt.Println()
 
 	// List and symlink each skill
@@ -228,30 +232,31 @@ func installSkills(reader *bufio.Reader) error {
 				// It's a symlink, check if it points to the same place
 				existing, _ := os.Readlink(dstPath)
 				if existing == srcPath {
-					fmt.Printf("  [=] %s (already installed)\n", skillName)
+					fmt.Printf("  %s %s %s\n", styles.Muted.Render("="), skillName, styles.Muted.Render("(already installed)"))
 					continue
 				}
 				// Remove old symlink
 				os.Remove(dstPath)
 			} else {
 				// It's a regular directory, skip
-				fmt.Printf("  [!] %s (skipped: directory already exists)\n", skillName)
+				fmt.Printf("  %s %s %s\n", styles.WarningText.Render("!"), skillName, styles.Muted.Render("(skipped: directory exists)"))
 				continue
 			}
 		}
 
 		// Create symlink
 		if err := os.Symlink(srcPath, dstPath); err != nil {
-			fmt.Printf("  [x] %s (failed: %v)\n", skillName, err)
+			fmt.Printf("  %s %s %s\n", styles.ErrorText.Render(styles.ErrorIcon), skillName, styles.Muted.Render(fmt.Sprintf("(failed: %v)", err)))
 			continue
 		}
 
-		fmt.Printf("  [+] %s\n", skillName)
+		fmt.Printf("  %s %s\n", styles.SuccessText.Render(styles.CheckIcon), skillName)
 		installedCount++
 	}
 
 	if installedCount > 0 {
-		fmt.Printf("\nInstalled %d skill(s) to Claude.\n", installedCount)
+		fmt.Println()
+		fmt.Println(format.FormatSuccess(fmt.Sprintf("Installed %d skill(s) to Claude", installedCount)))
 	}
 
 	return nil
@@ -318,8 +323,6 @@ func Init() error {
 	}
 
 	cwd, _ := os.Getwd()
-	fmt.Printf("Initialized Ralph for: %s\n", cwd)
-	fmt.Printf("Project data directory: %s\n", projectDir)
 
 	// Store original path for display purposes
 	pathFile := filepath.Join(projectDir, ".path")
@@ -336,10 +339,15 @@ func Init() error {
 		}
 	}
 
+	// Display success
+	fmt.Println(format.FormatSuccess("Ralph initialized"))
 	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Run 'ralph prd' to create a PRD")
-	fmt.Println("  2. Run 'ralph run' to start the autonomous loop")
+	fmt.Println(format.FormatKeyValue("Project", filepath.Base(cwd)))
+	fmt.Println(format.FormatKeyValue("Path", cwd))
+	fmt.Println()
+	fmt.Println(styles.Muted.Render("Next steps:"))
+	fmt.Println(format.FormatNextStep("/prd", "in Claude to create a PRD"))
+	fmt.Println(format.FormatNextStep("ralph run", "to start the autonomous loop"))
 
 	return nil
 }
@@ -352,16 +360,20 @@ func Status() error {
 	}
 
 	cwd, _ := os.Getwd()
-	fmt.Printf("Project: %s\n", cwd)
-	fmt.Printf("Data dir: %s\n", projectDir)
+
+	fmt.Println(format.FormatHeader("Project Status"))
 	fmt.Println()
 
 	// Check if project is initialized
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
-		fmt.Println("Status: Not initialized")
-		fmt.Println("Run 'ralph init' to initialize this project.")
+		fmt.Println(format.FormatKeyValue("Project", filepath.Base(cwd)))
+		fmt.Println(format.FormatKeyValue("Status", styles.WarningText.Render("Not initialized")))
+		fmt.Println()
+		fmt.Println(format.FormatNextStep("ralph init", "to initialize this project"))
 		return nil
 	}
+
+	fmt.Println(format.FormatKeyValue("Project", filepath.Base(cwd)))
 
 	// Load PRD if exists
 	if prd.Exists(projectDir) {
@@ -370,20 +382,44 @@ func Status() error {
 			return fmt.Errorf("failed to load prd.json: %w", err)
 		}
 
-		fmt.Printf("Branch: %s\n", p.BranchName)
-		fmt.Printf("Stories: %d/%d complete\n", p.CompletedCount(), p.TotalCount())
+		branch := strings.TrimPrefix(p.BranchName, "ralph/")
+		fmt.Println(format.FormatKeyValue("Branch", branch))
+
+		completed := p.CompletedCount()
+		total := p.TotalCount()
+		storiesText := fmt.Sprintf("%d/%d complete", completed, total)
 
 		if p.IsComplete() {
-			fmt.Println("Status: All stories complete!")
+			fmt.Println(format.FormatKeyValue("Stories", styles.SuccessText.Render(storiesText+" "+styles.CheckIcon)))
+		} else {
+			fmt.Println(format.FormatKeyValue("Stories", storiesText))
+		}
+
+		// Progress bar
+		if total > 0 {
+			prog := progress.New(progress.WithDefaultGradient(), progress.WithWidth(30), progress.WithoutPercentage())
+			percent := float64(completed) / float64(total)
+			fmt.Println()
+			fmt.Println(prog.ViewAs(percent))
+		}
+
+		fmt.Println()
+
+		if p.IsComplete() {
+			fmt.Println(format.FormatSuccess("All stories complete!"))
+			fmt.Println(format.FormatNextStep("ralph archive", "to archive and start fresh"))
 		} else {
 			next := p.NextIncomplete()
 			if next != nil {
-				fmt.Printf("Next: [%s] %s\n", next.ID, next.Title)
+				fmt.Println(format.FormatKeyValue("Next", fmt.Sprintf("[%s] %s", next.ID, next.Title)))
 			}
+			fmt.Println()
+			fmt.Println(format.FormatNextStep("ralph run", "to continue"))
 		}
 	} else {
-		fmt.Println("No prd.json found.")
-		fmt.Println("Run 'ralph prd' to create a PRD.")
+		fmt.Println(format.FormatKeyValue("Status", styles.Muted.Render("No PRD")))
+		fmt.Println()
+		fmt.Println(format.FormatNextStep("/prd", "in Claude to create a PRD"))
 	}
 
 	return nil
@@ -449,6 +485,7 @@ func Archive() error {
 
 	// Copy files to archive
 	filesToArchive := []string{"prd.json", "progress.txt", "prd.md"}
+	archivedFiles := []string{}
 	for _, file := range filesToArchive {
 		src := filepath.Join(projectDir, file)
 		if _, err := os.Stat(src); err == nil {
@@ -460,6 +497,7 @@ func Archive() error {
 			if err := os.WriteFile(dst, data, 0644); err != nil {
 				return err
 			}
+			archivedFiles = append(archivedFiles, file)
 		}
 	}
 
@@ -476,8 +514,13 @@ func Archive() error {
 	os.Remove(filepath.Join(projectDir, "prd.md"))
 	os.Remove(filepath.Join(projectDir, ".last-branch"))
 
-	fmt.Printf("Archived to: %s\n", archiveDir)
-	fmt.Println("PRD files removed. Ready for a new feature.")
+	// Display success
+	fmt.Println(format.FormatSuccess("Archive created"))
+	fmt.Println()
+	fmt.Println(format.FormatKeyValue("Archived", strings.Join(archivedFiles, ", ")))
+	fmt.Println(format.FormatKeyValue("Location", archiveDir))
+	fmt.Println()
+	fmt.Println(format.FormatNextStep("/prd", "in Claude to start a new feature"))
 
 	return nil
 }
@@ -489,12 +532,46 @@ func Clean(all bool) error {
 		return err
 	}
 
+	// Show warning and list what will be deleted
+	fmt.Println(format.FormatWarning("This will delete:"))
+	fmt.Println()
+
+	if all {
+		fmt.Println(format.FormatBullet("All project data including archives"))
+		fmt.Println(format.FormatBullet(projectDir))
+	} else {
+		files := []string{"prd.json", "prd.md", "progress.txt", ".last-branch"}
+		for _, file := range files {
+			fmt.Println(format.FormatBullet(file))
+		}
+		fmt.Println()
+		fmt.Println(styles.Muted.Render("Archives will be preserved."))
+	}
+
+	fmt.Println()
+	fmt.Println(styles.Muted.Render("This cannot be undone."))
+	fmt.Print(styles.WarningText.Render("Continue? [y/N] "))
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	input = strings.TrimSpace(strings.ToLower(input))
+	if input != "y" && input != "yes" {
+		fmt.Println(styles.Muted.Render("Cancelled."))
+		return nil
+	}
+
+	fmt.Println()
+
 	if all {
 		// Remove entire project directory
 		if err := os.RemoveAll(projectDir); err != nil {
 			return err
 		}
-		fmt.Printf("Removed all project data: %s\n", projectDir)
+		fmt.Println(format.FormatSuccess("Removed all project data"))
 	} else {
 		// Remove only current run files (not archive)
 		files := []string{"prd.json", "prd.md", "progress.txt", ".last-branch"}
@@ -502,7 +579,7 @@ func Clean(all bool) error {
 			path := filepath.Join(projectDir, file)
 			os.Remove(path)
 		}
-		fmt.Println("Removed current run files (archive preserved).")
+		fmt.Println(format.FormatSuccess("Cleaned current run files"))
 	}
 
 	return nil

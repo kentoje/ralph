@@ -11,11 +11,9 @@ import (
 	"github.com/kento/ralph/internal/config"
 	"github.com/kento/ralph/internal/prd"
 	"github.com/kento/ralph/internal/project"
+	"github.com/kento/ralph/internal/ui/format"
+	"github.com/kento/ralph/internal/ui/styles"
 )
-
-var listTitleStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("170"))
 
 type projectInfo struct {
 	id           string
@@ -39,8 +37,8 @@ func List() error {
 	}
 
 	if len(projects) == 0 {
-		fmt.Println("No projects found.")
-		fmt.Println("Run 'ralph init' in a project directory to get started.")
+		fmt.Println(styles.Muted.Render("No projects found."))
+		fmt.Println(format.FormatNextStep("ralph init", "in a project directory to get started"))
 		return nil
 	}
 
@@ -63,7 +61,7 @@ func List() error {
 		maxNameLen = MinNameDisplayLen
 	}
 
-	fmt.Println(listTitleStyle.Render("Ralph Projects"))
+	fmt.Println(format.FormatHeader("Ralph Projects"))
 	fmt.Println()
 
 	// Define table columns
@@ -105,14 +103,14 @@ func List() error {
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
+		BorderForeground(styles.Border).
 		BorderBottom(true).
 		Bold(true).
-		Foreground(lipgloss.Color("170"))
+		Foreground(styles.Primary)
 	s.Cell = s.Cell.Padding(0, 1)
 	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
+		Foreground(styles.FgBase).
+		Background(styles.Primary).
 		Bold(false)
 
 	t := table.New(

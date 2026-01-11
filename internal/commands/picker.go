@@ -8,14 +8,14 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kento/ralph/internal/ui/styles"
 )
 
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2).Bold(true)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = lipgloss.NewStyle().PaddingLeft(4).PaddingBottom(1).Foreground(lipgloss.Color("241"))
+	pickerTitleStyle    = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(styles.Primary)
+	pickerItemStyle     = lipgloss.NewStyle().PaddingLeft(4)
+	pickerSelectedStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(styles.Primary)
+	pickerHelpStyle     = lipgloss.NewStyle().PaddingLeft(4).PaddingBottom(1).Foreground(styles.FgSubtle)
 )
 
 type commandItem struct {
@@ -38,10 +38,10 @@ func (d commandItemDelegate) Render(w io.Writer, m list.Model, index int, listIt
 
 	str := fmt.Sprintf("%-10s %s", i.name, i.description)
 
-	fn := itemStyle.Render
+	fn := pickerItemStyle.Render
 	if index == m.Index() {
 		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+			return pickerSelectedStyle.Render("> " + strings.Join(s, " "))
 		}
 	}
 
@@ -96,7 +96,15 @@ func (m pickerModel) View() string {
 	if m.quitting {
 		return ""
 	}
-	return "\n" + m.list.View()
+
+	var b strings.Builder
+	b.WriteString("\n")
+	b.WriteString(pickerTitleStyle.Render("Ralph Commands"))
+	b.WriteString("\n\n")
+	b.WriteString(m.list.View())
+	b.WriteString("\n")
+	b.WriteString(pickerHelpStyle.Render("↑/↓ navigate • enter select • q quit"))
+	return b.String()
 }
 
 func RunInteractivePicker() error {
@@ -117,9 +125,7 @@ func RunInteractivePicker() error {
 	l := list.New(items, commandItemDelegate{}, 40, listHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
+	l.SetShowTitle(false)
 	l.SetShowHelp(false)
 
 	m := pickerModel{list: l}
