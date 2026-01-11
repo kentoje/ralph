@@ -6,11 +6,11 @@
     status     Show project status [K
     prd        Create/edit PRD     [K
     list       List all projects   [K
+    logs       View run logs       [K
     archive    Archive current run [K
     clean      Remove project data [K
     setup      Configure RALPH_HOME[K
     help       Show help           [K
-                                   [K
                                    [K
                                    [K
                                    [K
