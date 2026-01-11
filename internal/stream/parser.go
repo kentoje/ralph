@@ -170,6 +170,26 @@ func extractToolContext(toolName string, input map[string]any) string {
 		if query, ok := input["query"].(string); ok {
 			return truncate(query, 40)
 		}
+	case "BashOutput":
+		if bashID, ok := input["bash_id"].(string); ok {
+			return truncate(bashID, 40)
+		}
+	case "MultiEdit":
+		if path, ok := input["file_path"].(string); ok {
+			return shortenPath(path)
+		}
+	case "KillShell":
+		if shellID, ok := input["shell_id"].(string); ok {
+			return truncate(shellID, 40)
+		}
+	case "NotebookEdit":
+		if path, ok := input["notebook_path"].(string); ok {
+			return shortenPath(path)
+		}
+	case "TaskOutput":
+		if taskID, ok := input["task_id"].(string); ok {
+			return truncate(taskID, 40)
+		}
 	}
 
 	// Generic fallback: try common field names
