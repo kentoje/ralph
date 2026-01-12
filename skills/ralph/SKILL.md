@@ -17,30 +17,12 @@ Take a PRD (markdown file or text) and convert it to `prd.json`.
 
 ### Auto-detect Project Directory
 
-1. Get home directory:
-
+1. Get project directory:
    ```bash
-   echo $HOME
+   ralph project-dir
    ```
 
-2. Get project ID from current working directory:
-
-   ```bash
-   pwd | sed 's|^/||' | tr '/' '-' | tr '[:upper:]' '[:lower:]'
-   ```
-
-   Example: `/Volumes/HomeX/kento/Documents/gitlab/assets-page` → `volumes-homex-kento-documents-gitlab-assets-page`
-
-3. Save `prd.json` to:
-   ```
-   $(ralph home)/projects/<project-id>/prd.json
-   ```
-
-**CRITICAL: Path Handling**
-
-- NEVER assume `$HOME` equals `/Users/username` — it varies by system
-- ALWAYS use bash to expand paths first
-- Use the full expanded path (e.g., `/Volumes/HomeX/kento/...`) in Write tool calls
+2. Save `prd.json` to: `$(ralph project-dir)/prd.json`
 
 ---
 

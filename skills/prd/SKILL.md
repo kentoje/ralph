@@ -135,23 +135,12 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 
 **CRITICAL: Always save to the global Ralph projects directory, never the project itself.**
 
-1. Get home directory:
+1. Get project directory:
    ```bash
-   echo $HOME
+   ralph project-dir
    ```
 
-2. Get project ID from current working directory:
-   ```bash
-   pwd | sed 's|^/||' | tr '/' '-' | tr '[:upper:]' '[:lower:]'
-   ```
-   Example: `/Volumes/HomeX/kento/Documents/gitlab/assets-page` → `volumes-homex-kento-documents-gitlab-assets-page`
-
-3. Save to: `$(ralph home)/projects/<project-id>/prd.md`
-
-**Path Handling:**
-- NEVER assume `$HOME` equals `/Users/username` — it varies by system
-- ALWAYS use bash to expand `$HOME` first
-- Use the full expanded path in Write tool calls
+2. Save to: `$(ralph project-dir)/prd.md`
 
 ---
 
