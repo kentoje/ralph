@@ -33,6 +33,8 @@ func main() {
 		err = commands.Setup()
 	case "home":
 		err = commands.Home()
+	case "project-dir":
+		err = commands.ProjectDir()
 	case "init":
 		err = commands.Init()
 	case "run":

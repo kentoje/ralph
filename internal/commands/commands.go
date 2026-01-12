@@ -38,6 +38,7 @@ Commands:
   help         Show this help message
   setup        Configure RALPH_HOME path
   home         Print RALPH_HOME path
+  project-dir  Print full project directory path
   init         Initialize Ralph for current project
   run [n]      Run autonomous loop (default: 25 iterations)
   status       Show current project status
@@ -50,6 +51,7 @@ Commands:
 Examples:
   ralph              # Interactive mode
   ralph home         # Print RALPH_HOME path
+  ralph project-dir  # Print project directory path
   ralph run          # Run with 25 iterations
   ralph run 5        # Run with 5 iterations
   ralph logs         # View run logs
@@ -63,6 +65,16 @@ func Home() error {
 		return err
 	}
 	fmt.Println(home)
+	return nil
+}
+
+// ProjectDir prints the full project directory path
+func ProjectDir() error {
+	projectDir, err := project.GetProjectDir()
+	if err != nil {
+		return err
+	}
+	fmt.Println(projectDir)
 	return nil
 }
 
