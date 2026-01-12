@@ -49,11 +49,11 @@ Take a PRD (markdown file or text) and convert it to `prd.json`.
 ```json
 {
   "project": "[Project Name]",
-  "branchName": "ralph/[feature-name-kebab-case]",
+  "branchName": "[detected-prefix]/[feature-name-kebab-case]",
   "description": "[Feature description from PRD title/intro]",
   "userStories": [
     {
-      "id": "US-001",
+      "id": "[TICKET-0000 or US-001]",
       "title": "[Story title]",
       "description": "As a [user], I want [feature] so that [benefit]",
       "acceptanceCriteria": ["Criterion 1", "Criterion 2", "Typecheck passes"],
@@ -64,6 +64,8 @@ Take a PRD (markdown file or text) and convert it to `prd.json`.
   ]
 }
 ```
+
+**Note:** Branch prefix and ticket IDs are detected from project conventions. See "Ticket Convention Detection" and "Branch Convention Detection" sections below.
 
 ---
 
@@ -149,13 +151,84 @@ Frontend stories are NOT complete until visually verified. Ralph will use the de
 
 ---
 
+## Ticket Convention Detection
+
+Before assigning story IDs, detect the project's existing ticket convention from git history:
+
+```bash
+# Run in the target project directory to find ticket patterns
+git log --oneline -50 | grep -oE '[A-Z]{2,10}-[0-9]+' | cut -d'-' -f1 | sort | uniq -c | sort -rn | head -1
+```
+
+This returns the most common ticket prefix with its count. Example output: `31 CI` means "CI" prefix was found 31 times → use `CI-0000`.
+
+**Rules:**
+
+1. If a prefix is found (e.g., "CI", "JIRA", "PROJ"):
+   - Use that prefix + "0000" for ALL stories: `CI-0000`, `JIRA-0000`
+   - All stories share the same placeholder ID (no real ticket assigned)
+
+2. If NO ticket convention is found:
+   - Use sequential IDs: `US-001`, `US-002`, etc.
+
+**Examples of detected patterns:**
+
+- `feat: CI-1234 - Something` → prefix is `CI` → use `CI-0000`
+- `fix: JIRA-567 Something` → prefix is `JIRA` → use `JIRA-0000`
+- `[PROJ-890] Something` → prefix is `PROJ` → use `PROJ-0000`
+- No pattern found → use `US-001`, `US-002`, etc.
+
+---
+
+## Branch Convention Detection
+
+Before setting the branch name, detect the project's existing branch naming convention:
+
+```bash
+# Run in the target project directory to find branch prefixes
+git branch -a | grep -oE '(feature|feat|fix|bugfix|hotfix|release|chore)/' | sort | uniq -c | sort -rn | head -1
+```
+
+This returns the most common branch prefix with its count. Example output: `150 feat/` means "feat/" prefix was found 150 times → use `feat/`.
+
+**Rules:**
+
+1. If a branch prefix is found (e.g., `feature/`, `feat/`, `fix/`):
+   - Use that prefix instead of `ralph/`
+   - Example: `feature/task-status` instead of `ralph/task-status`
+
+2. If NO branch convention is found:
+   - Use `ralph/` prefix: `ralph/feature-name`
+
+**Common prefixes to detect:**
+
+- `feature/`
+- `feat/`
+- `fix/`
+- `bugfix/`
+- `hotfix/`
+- `release/`
+- `chore/`
+
+**Examples:**
+
+- Project has `feature/add-login`, `feature/user-profile` → use `feature/task-status`
+- Project has `feat/api-v2`, `feat/dashboard` → use `feat/task-status`
+- Project has no convention → use `ralph/task-status`
+
+---
+
 ## Conversion Rules
 
 1. **Each user story becomes one JSON entry**
-2. **IDs**: Sequential (US-001, US-002, etc.)
+2. **IDs**: Based on detected ticket convention (see Ticket Convention Detection)
+   - With convention: All stories get `PREFIX-0000` (e.g., `CI-0000`)
+   - Without convention: Sequential `US-001`, `US-002`, etc.
 3. **Priority**: Based on dependency order, then document order
 4. **All stories**: `passes: false` and empty `notes`
-5. **branchName**: Derive from feature name, kebab-case, prefixed with `ralph/`
+5. **branchName**: Based on detected branch convention (see Branch Convention Detection)
+   - With convention: Use detected prefix (e.g., `feature/task-status`)
+   - Without convention: Use `ralph/` prefix (e.g., `ralph/task-status`)
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 
 ---
@@ -265,12 +338,12 @@ Add ability to mark tasks with different statuses.
 - Persist status in database
 ```
 
-**Output prd.json:**
+**Output prd.json (no conventions detected - uses defaults):**
 
 ```json
 {
   "project": "TaskApp",
-  "branchName": "ralph/task-status",
+  "branchName": "ralph/task-status", // No branch convention found → ralph/
   "description": "Task Status Feature - Track task progress with status indicators",
   "userStories": [
     {
@@ -333,6 +406,26 @@ Add ability to mark tasks with different statuses.
 }
 ```
 
+**Output prd.json (when project has conventions detected):**
+
+If the project has:
+
+- Ticket convention: commits like `feat: CI-1234 - Add login` → ticket prefix is `CI`
+- Branch convention: branches like `feature/add-login` → branch prefix is `feature/`
+
+```json
+{
+  "project": "TaskApp",
+  "branchName": "feature/task-status",  // Detected branch prefix
+  "userStories": [
+    { "id": "CI-0000", "title": "Add status field to tasks table", ... },
+    { "id": "CI-0000", "title": "Display status badge on task cards", ... },
+    { "id": "CI-0000", "title": "Add status toggle to task list rows", ... },
+    { "id": "CI-0000", "title": "Filter tasks by status", ... }
+  ]
+}
+```
+
 ---
 
 ## Archiving Previous Runs
@@ -354,6 +447,8 @@ Add ability to mark tasks with different statuses.
 
 Before writing prd.json, verify:
 
+- [ ] **Ticket convention checked** (detect from git history, use PREFIX-0000 or US-XXX)
+- [ ] **Branch convention checked** (detect from branches, use detected prefix or ralph/)
 - [ ] **Previous run archived** (if prd.json exists with different branchName, archive it first)
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)

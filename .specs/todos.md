@@ -1,2 +1,2 @@
 - make any agent cli pluggable?
-- change prompt so that we leverage multi sub agent. (parallel tasks, test/build sub agent task)
+- change how we detect the directory when creating a prd
