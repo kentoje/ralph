@@ -3,6 +3,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,6 +88,44 @@ func expandTilde(path string) string {
 	return path
 }
 
+// copyDir recursively copies a directory from src to dst
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+
+		// Copy file contents
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer dstFile.Close()
+
+		if _, err := io.Copy(dstFile, srcFile); err != nil {
+			return err
+		}
+
+		return os.Chmod(dstPath, info.Mode())
+	})
+}
+
 // Setup configures the RALPH_HOME path and installs skills
 func Setup() error {
 	fmt.Println(format.FormatHeader("Ralph Setup"))
@@ -166,7 +205,7 @@ func Setup() error {
 	return nil
 }
 
-// installSkills detects Claude config and symlinks ralph skills
+// installSkills detects Claude config and copies ralph skills
 func installSkills(reader *bufio.Reader) error {
 	fmt.Println()
 	fmt.Println(format.FormatHeader("Claude Skills Installation"))
@@ -227,7 +266,7 @@ func installSkills(reader *bufio.Reader) error {
 	fmt.Println(format.FormatKeyValue("Ralph skills", ralphSkillsDir))
 	fmt.Println()
 
-	// List and symlink each skill
+	// List and copy each skill
 	entries, err := os.ReadDir(ralphSkillsDir)
 	if err != nil {
 		return fmt.Errorf("failed to read skills directory: %w", err)
@@ -244,25 +283,28 @@ func installSkills(reader *bufio.Reader) error {
 		dstPath := filepath.Join(skillsDir, skillName)
 
 		// Check if skill already exists
-		if info, err := os.Lstat(dstPath); err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				// It's a symlink, check if it points to the same place
-				existing, _ := os.Readlink(dstPath)
-				if existing == srcPath {
-					fmt.Printf("  %s %s %s\n", styles.Muted.Render("="), skillName, styles.Muted.Render("(already installed)"))
-					continue
-				}
-				// Remove old symlink
-				os.Remove(dstPath)
-			} else {
-				// It's a regular directory, skip
-				fmt.Printf("  %s %s %s\n", styles.WarningText.Render("!"), skillName, styles.Muted.Render("(skipped: directory exists)"))
+		if _, err := os.Lstat(dstPath); err == nil {
+			// Destination exists, ask user for permission to remove
+			fmt.Printf("  %s Skill '%s' already exists. Remove and reinstall? [y/N] ", styles.WarningText.Render("?"), skillName)
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				fmt.Printf("  %s %s %s\n", styles.ErrorText.Render(styles.ErrorIcon), skillName, styles.Muted.Render("(failed to read input)"))
+				continue
+			}
+			input = strings.TrimSpace(strings.ToLower(input))
+			if input != "y" && input != "yes" {
+				fmt.Printf("  %s %s %s\n", styles.Muted.Render("-"), skillName, styles.Muted.Render("(skipped)"))
+				continue
+			}
+			// Remove existing
+			if err := os.RemoveAll(dstPath); err != nil {
+				fmt.Printf("  %s %s %s\n", styles.ErrorText.Render(styles.ErrorIcon), skillName, styles.Muted.Render(fmt.Sprintf("(failed to remove: %v)", err)))
 				continue
 			}
 		}
 
-		// Create symlink
-		if err := os.Symlink(srcPath, dstPath); err != nil {
+		// Copy skill directory
+		if err := copyDir(srcPath, dstPath); err != nil {
 			fmt.Printf("  %s %s %s\n", styles.ErrorText.Render(styles.ErrorIcon), skillName, styles.Muted.Render(fmt.Sprintf("(failed: %v)", err)))
 			continue
 		}
