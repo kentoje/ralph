@@ -213,6 +213,17 @@ func (m runModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case iterationCompleteMsg:
 		if msg.success {
 			m.completed++
+			// Reload PRD and update current story to show the next incomplete one
+			if prdData, err := prd.Load(m.projectDir); err == nil && prdData != nil {
+				if next := prdData.NextIncomplete(); next != nil {
+					m.currentStory = next.ID
+					m.currentStoryTitle = next.Title
+				} else {
+					// All stories complete
+					m.currentStory = ""
+					m.currentStoryTitle = ""
+				}
+			}
 		}
 		m.iteration++
 
