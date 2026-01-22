@@ -200,6 +200,41 @@ This returns the most common branch prefix with its count. Example output: `150 
 
 ---
 
+## Preserving User-Specified Requirements
+
+**CRITICAL:** PRDs often contain explicit instructions that MUST be preserved in prd.json. When converting, scan the PRD for:
+
+- **Specific files mentioned** (e.g., "add to `src/pages/playground/Playground.tsx`")
+  → Include in the story's `description` or `acceptanceCriteria`
+- **Tools or skills to use** (e.g., "use the staging-browser-localhost skill to test")
+  → Add to `acceptanceCriteria` (e.g., "Test using staging-browser-localhost skill")
+- **Workflows described** (e.g., "to debug it, you will have to...")
+  → Add to `acceptanceCriteria` or `notes`
+- **Integration points** (e.g., "add it to the playground page")
+  → Include in story `description`
+- **Testing requirements** (e.g., "interact with it in the browser", "run against staging")
+  → Add to `acceptanceCriteria`
+
+These are **non-negotiable requirements** that the user explicitly stated. Do NOT omit them — they provide essential context for Ralph to complete the story correctly.
+
+**Example:**
+
+PRD says: "Add the component to `src/components/Dashboard.tsx` and test it using the staging-browser-localhost skill"
+
+Story should include:
+```json
+{
+  "description": "As a developer, I need to add the widget to src/components/Dashboard.tsx",
+  "acceptanceCriteria": [
+    "Widget added to src/components/Dashboard.tsx",
+    "Test using staging-browser-localhost skill",
+    "Typecheck passes"
+  ]
+}
+```
+
+---
+
 ## Conversion Rules
 
 1. **Each user story becomes one JSON entry**
@@ -212,6 +247,7 @@ This returns the most common branch prefix with its count. Example output: `150 
    - With convention: Use detected prefix (e.g., `feature/task-status`)
    - Without convention: Use `ralph/` prefix (e.g., `ralph/task-status`)
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
+7. **Preserve all user-specified requirements** (see "Preserving User-Specified Requirements" above)
 
 ---
 
@@ -432,6 +468,7 @@ Before writing prd.json, verify:
 - [ ] **Ticket convention checked** (detect from git history, use PREFIX-0000 or US-XXX)
 - [ ] **Branch convention checked** (detect from branches, use detected prefix or ralph/)
 - [ ] **Previous run archived** (if prd.json exists with different branchName, archive it first)
+- [ ] **User-specified requirements preserved** (specific files, tools/skills, workflows, testing requirements)
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
