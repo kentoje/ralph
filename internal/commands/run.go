@@ -507,6 +507,14 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		default:
 		}
 
+		// Capture completed count before iteration to detect new completions
+		var previousCompleted int
+		if prd.Exists(projectDir) {
+			if p, _ := prd.Load(projectDir); p != nil {
+				previousCompleted = p.CompletedCount()
+			}
+		}
+
 		// Read and substitute prompt
 		promptContent, err := os.ReadFile(promptPath)
 		if err != nil {
@@ -594,7 +602,7 @@ func runIterationLoop(ctx context.Context, p *tea.Program, state *runState, proj
 		}
 
 		// Check for completion signal
-		complete := checkForCompletion(projectDir)
+		complete := checkForCompletion(projectDir, previousCompleted)
 		p.Send(iterationCompleteMsg{success: complete})
 
 		if complete {
@@ -634,12 +642,12 @@ func streamOutput(p *tea.Program, r io.Reader) {
 	}
 }
 
-func checkForCompletion(projectDir string) bool {
-	// Check if any story was marked as complete in prd.json
+func checkForCompletion(projectDir string, previousCompleted int) bool {
+	// Check if a new story was completed in this iteration
 	if prd.Exists(projectDir) {
 		p, _ := prd.Load(projectDir)
 		if p != nil {
-			return p.CompletedCount() > 0
+			return p.CompletedCount() > previousCompleted
 		}
 	}
 	return false
